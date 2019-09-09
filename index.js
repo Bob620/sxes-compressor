@@ -1,12 +1,12 @@
 const { spawn } = require('child_process');
 
-const SevenBin = require('7zip-bin');
+const { path7za } = require('7zip-bin');
 const Seven = require('node-7z');
 
-const input = '//EPMA-NAS/data/Noah/SXES_Fe/2019-08-13/fe_stuff/test.7z';
+const input = 'C:\\Users\\EPMA_Castaing\\WebstormProjects\\sxes-compressor\\tests\\test.7z';
 
 const files = Seven.list(input, {
-	$bin: SevenBin.path7za,
+	$bin: path7za,
 });
 
 files.on('data', data => {
@@ -16,7 +16,7 @@ files.on('data', data => {
 files.on('end', () => {
 	console.log('Finished Listing');
 
-	const extraction = spawn(SevenBin.path7za, ['e', input, '-so', 'fe_stuff_sum_30.csv']);
+	const extraction = spawn(path7za, ['e', input, '-so', 'fe_stuff_0010_QLW/*']);
 
 	let final;
 
@@ -25,7 +25,7 @@ files.on('end', () => {
 	});
 
 	extraction.stdout.on('end', () => {
-		console.log(final.toString());
+//		console.log(final.toString());
 		console.log('Finished Extracting Data');
 	});
 });
