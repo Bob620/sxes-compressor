@@ -35,3 +35,22 @@ seven.streamExtract('*.b').on('data', output => {
 	else
 		console.log('Stream Extract: FAIL');
 });
+
+seven.update('test.c', 'c').then(async () => {
+	const files = (await seven.list()).map(({file}) => file);
+	if (files.includes('test.c') && (await seven.extract('*.c')).toString() === 'c') {
+		console.log('Promise Add: PASS');
+
+		seven.delete('*.c').then(async () => {
+			const files = (await seven.list()).map(({file}) => file);
+			if (!files.includes('test.c'))
+				console.log('Promise Delete: PASS');
+			else
+				console.log('Promise Delete: FAIL');
+		});
+	}
+	else {
+		console.log('Promise Add: FAIL');
+		console.log('Promise Delete: UNKN');
+	}
+});

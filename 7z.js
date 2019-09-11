@@ -49,6 +49,37 @@ module.exports = class SevenZip {
 		});
 	}
 
+	update(fileName, input) {
+		return new Promise(resolve => {
+			const child = spawn(this.bin, ['u', this.uri, `-si${fileName}`]);
+			child.stdin.write(input);
+			child.stdin.end();
+			child.stdout.on('end', () => {
+				resolve();
+			});
+		});
+	}
+
+	updateStream(fileName, inputStream) {
+		return new Promise(resolve => {
+			const child = spawn(this.bin, ['a', this.uri, `-si${fileName}`]);
+			inputStream.pipe(child.stdin);
+			child.stdout.on('end', () => {
+				resolve();
+			});
+		});
+	}
+
+	delete(match) {
+		return new Promise(resolve => {
+			Seven.delete(this.uri, match, {
+				$bin: this.bin
+			}).on('end', () => {
+				resolve();
+			});
+		});
+	}
+
 	streamList(match='*') {
 		return Seven.list(this.uri, {
 			$bin: this.bin,
