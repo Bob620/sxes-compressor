@@ -1,56 +1,74 @@
 const SevenZip = require('../7z.js');
-const seven = new SevenZip('./test.7z');
+const sevens = [{
+	name: 'zip',
+	seven: new SevenZip('./test.zip')
+},  {
+	name: '7z',
+	seven: new SevenZip('./test.7z')
+}];
 
-seven.list().then(files => {
-	const names = files.map(file => file.file);
-	if (names.length === 2 && names.includes('test.a') && names.includes('test.b'))
-		console.log('Promise List: PASS');
-	else
-		console.log('Promise List: FAIL');
-});
+Promise.all(sevens.map(async ({name, seven}) => {
+	const startTime = Date.now();
+	let promiseList = false;
+	let streamList = false;
+	let promiseExtract = false;
+	let streamExtract = false;
+	let promiseAdd = false;
+	let promiseDelete = false;
 
-let names = [];
-seven.streamList().on('data', ({file}) => {
-	names.push(file);
-}).on('end', () => {
-	if (names.length === 2 && names.includes('test.a') && names.includes('test.b'))
-		console.log('Stream List: PASS');
-	else
-		console.log('Stream List: FAIL');
-});
+	const listNames = (await seven.list()).map(file => file.file);
+	if (listNames.length === 2 && listNames.includes('test.a') && listNames.includes('test.b'))
+		promiseList = true;
 
-seven.extract('*.b').then(output => {
-	if (output.toString() === 'bc')
-		console.log('Promise Extract: PASS');
-	else
-		console.log('Promise Extract: FAIL');
-});
+	await new Promise(resolve => {
+		let names = [];
+		seven.streamList().on('data', ({file}) => {
+			names.push(file);
+		}).on('end', () => {
+			if (names.length === 2 && names.includes('test.a') && names.includes('test.b'))
+				streamList = true;
+			resolve();
+		});
+	});
 
-let contents = Buffer.concat([]);
-seven.streamExtract('*.b').on('data', output => {
-	contents = Buffer.concat([contents, output]);
-}).on('end', () => {
-	if (contents.toString() === 'bc')
-		console.log('Stream Extract: PASS');
-	else
-		console.log('Stream Extract: FAIL');
-});
+	if ((await seven.extract('*.b')).toString() === 'bc')
+		promiseExtract = true;
 
-seven.update('test.c', 'c').then(async () => {
+	await new Promise(resolve => {
+		let contents = Buffer.concat([]);
+		seven.streamExtract('*.b').on('data', output => {
+			contents = Buffer.concat([contents, output]);
+		}).on('end', () => {
+			if (contents.toString() === 'bc')
+				streamExtract = true;
+			resolve();
+		});
+	});
+
+	await seven.update('test.c', 'c');
+
 	const files = (await seven.list()).map(({file}) => file);
 	if (files.includes('test.c') && (await seven.extract('*.c')).toString() === 'c') {
-		console.log('Promise Add: PASS');
+		promiseAdd = true;
 
-		seven.delete('*.c').then(async () => {
-			const files = (await seven.list()).map(({file}) => file);
-			if (!files.includes('test.c'))
-				console.log('Promise Delete: PASS');
-			else
-				console.log('Promise Delete: FAIL');
-		});
+		await seven.delete('*.c');
+		const files = (await seven.list()).map(({file}) => file);
+		if (!files.includes('test.c'))
+			promiseDelete = true;
 	}
-	else {
-		console.log('Promise Add: FAIL');
-		console.log('Promise Delete: UNKN');
-	}
-});
+
+	const endTime = Date.now();
+
+	return {startTime, endTime, name, promiseList, streamList, promiseExtract, streamExtract, promiseAdd, promiseDelete};
+})).then(output => output.map(({name, startTime, endTime, promiseList, streamList, promiseExtract, streamExtract, promiseAdd, promiseDelete}) => {
+	console.log(`${name} | Promise List: ${promiseList ? 'PASS' : 'FAIL'}`);
+	console.log(`${name} | Promise Extract: ${promiseExtract ? 'PASS' : 'FAIL'}`);
+	console.log(`${name} | Promise Add: ${promiseAdd ? 'PASS' : 'FAIL'}`);
+	console.log(`${name} | Promise Delete: ${promiseDelete ? 'PASS' : 'FAIL'}`);
+	console.log(`${name} | Stream List: ${streamList ? 'PASS' : 'FAIL'}`);
+	console.log(`${name} | Stream Extract: ${streamExtract ? 'PASS' : 'FAIL'}`);
+	return {name, startTime, endTime};
+}).map(({name, startTime, endTime}) => {
+	console.log(name);
+	console.log(`Length: ${endTime - startTime}ms\n`);
+}));
