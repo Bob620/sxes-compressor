@@ -1,9 +1,11 @@
 module.exports = class Project {
-	constructor(uuid, name, comment, analyses) {
+	constructor(archive, uuid, name='', comment='', analyses=new Map()) {
 		this.data = {
 			uuid,
 			name,
-			comment
+			comment,
+			analyses,
+			archive
 		}
 	}
 
@@ -42,4 +44,4 @@ module.exports = class Project {
 	delAnalysis(uuid) {
 
 	}
-}
+};

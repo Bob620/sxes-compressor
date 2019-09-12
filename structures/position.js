@@ -1,8 +1,39 @@
+const constants = require('../constants.json');
+
+const makeData = require('../makedata.js');
+
 module.exports = class Position {
-	constructor(uuid, info) {
+	constructor(archive, uri) {
+		const uriSplit = uri.split('/');
 		this.data = {
-			uuid
+			uuid: uriSplit[1],
+			uri: uriSplit.slice(0, 2).join('/'),
+			archive,
+			background: undefined,
+			condition: undefined,
+			rawCondition: undefined,
+			comment: '',
+			data: new Map()
 		}
+	}
+
+	async initialize({rawConditions, conditions, backgrounds}) {
+		const metadata = JSON.parse(await this.data.archive.extract(this.data.uri + '/' + constants.fileStructure.position.METAFILE));
+
+		if (this.uuid !== metadata[constants.positionMeta.UUID])
+			console.warn(`Expected ${this.uuid}, got ${metadata[constants.positionMeta.UUID]}`);
+
+		this.data.rawCondition = rawConditions.get(metadata[constants.positionMeta.RAWCONDTIONUUID]);
+		this.data.condition = conditions.get(metadata[constants.positionMeta.CONDITIONUUID]);
+		this.data.background = backgrounds.get(metadata[constants.positionMeta.BACKGROUNDUUID]);
+		this.data.comment = metadata[constants.positionMeta.COMMENT];
+		this.data.position = metadata[constants.positionMeta.POSITION];
+
+		this.data.data = new Map((await this.data.archive.list(this.data.uri + '/' + constants.fileStructure.position.DATA))
+			.map(({file}) => file).map(uri => makeData(this.data.archive, uri)).map(data => [data.name, data])
+		);
+
+		return this;
 	}
 
 	get uuid() {
@@ -25,15 +56,19 @@ module.exports = class Position {
 
 	}
 
-	get xes() {
+	getTypes() {
+		return this.data.data;
+	}
+
+	getType(name) {
+		return this.data.data.get(type);
+	}
+
+	addType(data) {
 
 	}
 
-	get qlw() {
-
-	}
-
-	get qlwExtracted() {
+	deleteType(name) {
 
 	}
 
@@ -44,4 +79,4 @@ module.exports = class Position {
 	setComment(comment) {
 
 	}
-}
+};

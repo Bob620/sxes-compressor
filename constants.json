@@ -1,0 +1,43 @@
+{
+  "fileTypes": {
+    "DEFAULT": "zip",
+    "plzip": "zip",
+    "zip": "zip",
+    "7z": "7z",
+    "pl7z": "7z"
+  },
+  "fileStructure": {
+    "METADATA": "metadata.json",
+    "POSITIONINLET": "data/*/info.json",
+    "BACKGROUNDINLET": "backgrounds/*/info.json",
+    "CONDITIONINLET": "conditions/*",
+    "RAWCONDITIONINLET": "rawConditions/*",
+    "position": {
+      "METAFILE": "info.json",
+      "DATA": "*.data"
+    },
+    "background": {
+      "METAFILE": "info.json",
+      "DATA": "*.data"
+    }
+  },
+  "metaMeta": {
+    "ANALYSES": "analyses",
+    "PROJECTS": "projects"
+  },
+  "positionMeta": {
+    "RAWCONDTIONUUID": "rawCondtionUuid",
+    "CONDITIONUUID": "conditionUuid",
+    "BACKGROUNDUUID": "backgroundUuid",
+    "UUID": "uuid",
+    "COMMENT": "comment",
+    "POSITION": "position",
+    "ACQUISITIONDATE": "acquisitionDate",
+    "SAVEDATE": "saveDate"
+  },
+  "dataTypes": {
+    "XES": "xes",
+    "QLW": "qlw",
+    "QLWEXTRACTED": "qlwExtracted"
+  }
+}

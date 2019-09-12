@@ -5,10 +5,11 @@ const { path7za } = require('7zip-bin');
 const Seven = require('node-7z');
 
 module.exports = class SevenZip {
-	constructor(uri, bin=path7za) {
+	constructor(uri, type='', bin=path7za) {
 		this.data = {
 			bin,
-			uri: path.resolve(uri)
+			uri: path.resolve(uri),
+			type
 		}
 	}
 
@@ -20,11 +21,16 @@ module.exports = class SevenZip {
 		return this.data.uri;
 	}
 
+	get type() {
+		return this.data.type;
+	}
+
 	list(match='*') {
 		return new Promise(resolve => {
 			const child = Seven.list(this.uri, {
 				$bin: this.bin,
-				$cherryPick: [match]
+				$cherryPick: [match],
+				archiveType: this.type
 			});
 			let output = [];
 			child.on('data', data => {
@@ -38,7 +44,7 @@ module.exports = class SevenZip {
 
 	extract(match='*') {
 		return new Promise(resolve => {
-			const child = spawn(this.bin, ['e', this.uri, '-so', match]);
+			const child = spawn(this.bin, ['e', this.uri, '-so', match, `-t${this.type}`]);
 			let output = Buffer.concat([]);
 			child.stdout.on('data', data => {
 				output = Buffer.concat([output, data]);
@@ -51,7 +57,7 @@ module.exports = class SevenZip {
 
 	update(fileName, input) {
 		return new Promise(resolve => {
-			const child = spawn(this.bin, ['u', this.uri, `-si${fileName}`]);
+			const child = spawn(this.bin, ['u', this.uri, `-si${fileName}`, `-t${this.type}`]);
 			child.stdin.write(input);
 			child.stdin.end();
 			child.stdout.on('end', () => {
@@ -62,7 +68,7 @@ module.exports = class SevenZip {
 
 	updateStream(fileName, inputStream) {
 		return new Promise(resolve => {
-			const child = spawn(this.bin, ['a', this.uri, `-si${fileName}`]);
+			const child = spawn(this.bin, ['a', this.uri, `-si${fileName}`, `-t${this.type}`]);
 			inputStream.pipe(child.stdin);
 			child.stdout.on('end', () => {
 				resolve();
@@ -73,7 +79,8 @@ module.exports = class SevenZip {
 	delete(match) {
 		return new Promise(resolve => {
 			Seven.delete(this.uri, match, {
-				$bin: this.bin
+				$bin: this.bin,
+				archiveType: this.type
 			}).on('end', () => {
 				resolve();
 			});
@@ -83,11 +90,12 @@ module.exports = class SevenZip {
 	streamList(match='*') {
 		return Seven.list(this.uri, {
 			$bin: this.bin,
-			$cherryPick: [match]
+			$cherryPick: [match],
+			archiveType: this.type
 		});
 	}
 
 	streamExtract(match='*') {
-		return spawn(this.bin, ['e', this.uri, '-so', match]).stdout;
+		return spawn(this.bin, ['e', this.uri, '-so', match, `-t${this.type}`]).stdout;
 	}
 };
