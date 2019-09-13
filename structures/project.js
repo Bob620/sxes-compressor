@@ -30,18 +30,18 @@ module.exports = class Project {
 	}
 
 	getAnalyses() {
-
+		return this.data.analyses;
 	}
 
 	getAnalysis(uuid) {
-
+		return this.data.analyses.get(uuid);
 	}
 
 	addAnalysis(analysis) {
 
 	}
 
-	delAnalysis(uuid) {
+	deleteAnalysis(uuid) {
 
 	}
 };

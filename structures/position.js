@@ -1,5 +1,6 @@
 const constants = require('../constants.json');
 
+const State = require('./state.js');
 const makeData = require('../makedata.js');
 
 module.exports = class Position {
@@ -13,6 +14,7 @@ module.exports = class Position {
 			condition: undefined,
 			rawCondition: undefined,
 			comment: '',
+			state: new State(archive, uri + '/' + constants.fileStructure.position.STATE),
 			data: new Map()
 		}
 	}
@@ -23,11 +25,12 @@ module.exports = class Position {
 		if (this.uuid !== metadata[constants.positionMeta.UUID])
 			console.warn(`Expected ${this.uuid}, got ${metadata[constants.positionMeta.UUID]}`);
 
+		await this.data.state.initialize();
+
 		this.data.rawCondition = rawConditions.get(metadata[constants.positionMeta.RAWCONDTIONUUID]);
 		this.data.condition = conditions.get(metadata[constants.positionMeta.CONDITIONUUID]);
 		this.data.background = backgrounds.get(metadata[constants.positionMeta.BACKGROUNDUUID]);
 		this.data.comment = metadata[constants.positionMeta.COMMENT];
-		this.data.position = metadata[constants.positionMeta.POSITION];
 
 		this.data.data = new Map((await this.data.archive.list(this.data.uri + '/' + constants.fileStructure.position.DATA))
 			.map(({file}) => file).map(uri => makeData(this.data.archive, uri)).map(data => [data.name, data])
@@ -41,19 +44,19 @@ module.exports = class Position {
 	}
 
 	get background() {
-
+		return this.data.background;
 	}
 
 	get condition() {
-
+		return this.data.condition;
 	}
 
 	get rawCondition() {
-
+		return this.data.rawCondition;
 	}
 
 	get state() {
-
+		return this.data.state;
 	}
 
 	getTypes() {

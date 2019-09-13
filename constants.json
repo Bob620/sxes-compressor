@@ -14,6 +14,7 @@
     "RAWCONDITIONINLET": "rawConditions/*",
     "position": {
       "METAFILE": "info.json",
+      "STATE": "state.json",
       "DATA": "*.data"
     },
     "background": {
@@ -30,10 +31,22 @@
     "CONDITIONUUID": "conditionUuid",
     "BACKGROUNDUUID": "backgroundUuid",
     "UUID": "uuid",
-    "COMMENT": "comment",
+    "COMMENT": "comment"
+  },
+  "positionState": {
     "POSITION": "position",
     "ACQUISITIONDATE": "acquisitionDate",
-    "SAVEDATE": "saveDate"
+    "SAVEDATE": "saveDate",
+    "STEPSIZE": "stepSize",
+    "DWELLTIME": "dwellTime",
+    "BEAMCURRENT": "beamCurrent",
+    "ACCELERATINGVOLTAGE": "acceleratingVoltage",
+    "MAGNIFICATION": "mag",
+    "BEAMMAGNIFICATION": "beamMag",
+    "BEAMX": "beamX",
+    "BEAMY": "beamY",
+    "PROBEDIAMETER": "probeDiameter",
+    "GRATING": "grating"
   },
   "dataTypes": {
     "XES": "xes",

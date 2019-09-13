@@ -25,23 +25,23 @@ module.exports = class Analysis {
 		return this.data.comment;
 	}
 
-	setComment() {
+	setComment(comment) {
 
 	}
 
 	getPositions() {
-
+		return this.data.positions
 	}
 
 	getPosition(uuid) {
-
+		return this.data.positions.get(uuid);
 	}
 
 	addPosition(position) {
 
 	}
 
-	delPosition(uuid) {
+	deletePosition(uuid) {
 
 	}
 };
