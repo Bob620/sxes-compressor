@@ -9,66 +9,83 @@ const sevens = [{
 
 Promise.all(sevens.map(async ({name, seven}) => {
 	const startTime = Date.now();
-	let promiseList = false;
-	let streamList = false;
-	let promiseExtract = false;
-	let streamExtract = false;
-	let promiseAdd = false;
-	let promiseDelete = false;
+	let promiseList = {pass: false, length: 0};
+	let promiseExtract = {pass: false, length: 0};
+	let streamExtract = {pass: false, length: 0};
+	let promiseAdd = {pass: false, length: 0};
+	let promiseDelete = {pass: false, length: 0};
 
-	const listNames = (await seven.list()).map(file => file.file);
+	let start;
+	let end;
+
+	start = Date.now();
+	let listNames = await seven.list();
+	end = Date.now();
+
+	listNames = listNames.map(({name}) => name);
 	if (listNames.length === 2 && listNames.includes('test.a') && listNames.includes('test.b'))
-		promiseList = true;
+		promiseList = {pass: true, length: end - start};
+	else
+		promiseList.length = end - start;
 
-	await new Promise(resolve => {
-		let names = [];
-		seven.streamList().on('data', ({file}) => {
-			names.push(file);
-		}).on('end', () => {
-			if (names.length === 2 && names.includes('test.a') && names.includes('test.b'))
-				streamList = true;
-			resolve();
-		});
-	});
+	start = Date.now();
+	let extractBuffer = await seven.extract('*.b');
+	end = Date.now();
 
-	if ((await seven.extract('*.b')).toString() === 'bc')
-		promiseExtract = true;
+	if (extractBuffer.toString() === 'bc')
+		promiseExtract = {pass: true, length: end - start};
+	else
+		promiseExtract.length = end - start;
 
 	await new Promise(resolve => {
 		let contents = Buffer.concat([]);
+
+		start = Date.now();
 		seven.streamExtract('*.b').on('data', output => {
 			contents = Buffer.concat([contents, output]);
 		}).on('end', () => {
+			end = Date.now();
 			if (contents.toString() === 'bc')
-				streamExtract = true;
+				streamExtract = {pass: true, length: end - start};
+			else
+				streamExtract.length = end - start;
 			resolve();
 		});
 	});
 
+	start = Date.now();
 	await seven.update('test.c', 'c');
+	end = Date.now();
 
-	const files = (await seven.list()).map(({file}) => file);
+	const files = (await seven.list()).map(({name}) => name);
 	if (files.includes('test.c') && (await seven.extract('*.c')).toString() === 'c') {
-		promiseAdd = true;
+		promiseAdd = {pass: true, length: end - start};
 
+		start = Date.now();
 		await seven.delete('*.c');
-		const files = (await seven.list()).map(({file}) => file);
+		end = Date.now();
+
+		const files = (await seven.list()).map(({name}) => name);
 		if (!files.includes('test.c'))
-			promiseDelete = true;
-	}
+			promiseDelete = {pass: true, length: end - start};
+		else
+			promiseDelete.length = end - start;
+	} else
+		promiseAdd.length = end - start;
 
 	const endTime = Date.now();
 
-	return {startTime, endTime, name, promiseList, streamList, promiseExtract, streamExtract, promiseAdd, promiseDelete};
-})).then(output => output.map(({name, startTime, endTime, promiseList, streamList, promiseExtract, streamExtract, promiseAdd, promiseDelete}) => {
-	console.log(`${name} | Promise List: ${promiseList ? 'PASS' : 'FAIL'}`);
-	console.log(`${name} | Promise Extract: ${promiseExtract ? 'PASS' : 'FAIL'}`);
-	console.log(`${name} | Promise Add: ${promiseAdd ? 'PASS' : 'FAIL'}`);
-	console.log(`${name} | Promise Delete: ${promiseDelete ? 'PASS' : 'FAIL'}`);
-	console.log(`${name} | Stream List: ${streamList ? 'PASS' : 'FAIL'}`);
-	console.log(`${name} | Stream Extract: ${streamExtract ? 'PASS' : 'FAIL'}`);
-	return {name, startTime, endTime};
-}).map(({name, startTime, endTime}) => {
+	return {startTime, endTime, name, promiseList, promiseExtract, streamExtract, promiseAdd, promiseDelete};
+})).then(output => output.map(({name, startTime, endTime, promiseList, promiseExtract, streamExtract, promiseAdd, promiseDelete}) => {
+	console.log(`${name}\t| Promise List: ${promiseList.pass ? 'PASS' : 'FAIL'}\t(${promiseList.length}ms)`);
+	console.log(`${name}\t| Promise Extract: ${promiseExtract.pass ? 'PASS' : 'FAIL'}\t(${promiseExtract.length}ms)`);
+	console.log(`${name}\t| Promise Add: ${promiseAdd.pass ? 'PASS' : 'FAIL'}\t\t(${promiseAdd.length}ms)`);
+	console.log(`${name}\t| Promise Delete: ${promiseDelete.pass ? 'PASS' : 'FAIL'}\t(${promiseDelete.length}ms)`);
+	console.log(`${name}\t| Stream Extract: ${streamExtract.pass ? 'PASS' : 'FAIL'}\t(${streamExtract.length}ms)`);
+	console.log();
+	return {name, startTime, endTime, functionTime: streamExtract.length + promiseDelete.length + promiseAdd.length + promiseExtract.length + promiseList.length};
+}).map(({name, startTime, endTime, functionTime}) => {
 	console.log(name);
-	console.log(`Length: ${endTime - startTime}ms\n`);
+	console.log(`Total time to run tests:     ${endTime - startTime - functionTime}ms`);
+	console.log(`Total time to run functions: ${functionTime}ms\n`)
 }));
