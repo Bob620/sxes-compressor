@@ -34,20 +34,23 @@ module.exports = class SevenZip {
 			child.stdout.on('end', () => {
 				output = output.toString().split('\n');
 				const files = parseInt(output[output.length - 2].split(' ').filter(char => char)[4]);
-				const itemLengths = output[output.length - 3].split(' ').map(item => item.length);
-				resolve(output.slice((-3) - files, -3).map(line => line.trim().split('')).map(item => {
-					let info = {
-						datetime: item.splice(0, itemLengths[0]).join('').trim(),
-						attr: item.splice(0, itemLengths[1] + 1).join('').trim(),
-						size: parseInt(item.splice(0, itemLengths[2] + 1).join('').trim()),
-						compressedSize: parseInt(item.splice(0, itemLengths[3] + 1).join('').trim()),
-						name: item.splice(0, itemLengths[5] + 2).join('').trim()
-					};
-					if (isNaN(info.compressedSize))
-						info.compressedSize = 0;
+				if (!isNaN(files)) {
+					const itemLengths = output[output.length - 3].split(' ').map(item => item.length);
+					resolve(output.slice((-3) - files, -3).map(line => line.trim().split('')).map(item => {
+						let info = {
+							datetime: item.splice(0, itemLengths[0]).join('').trim(),
+							attr: item.splice(0, itemLengths[1] + 1).join('').trim(),
+							size: parseInt(item.splice(0, itemLengths[2] + 1).join('').trim()),
+							compressedSize: parseInt(item.splice(0, itemLengths[3] + 1).join('').trim()),
+							name: item.splice(0, itemLengths[5] + 2).join('').trim()
+						};
+						if (isNaN(info.compressedSize))
+							info.compressedSize = 0;
 
-					return info;
-				}));
+						return info;
+					}));
+				} else
+					resolve([]);
 			});
 		});
 	}
