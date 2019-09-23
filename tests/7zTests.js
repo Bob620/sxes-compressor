@@ -41,7 +41,7 @@ Promise.all(sevens.map(async ({name, seven}) => {
 		let contents = Buffer.concat([]);
 
 		start = Date.now();
-		seven.streamExtract('*.b').on('data', output => {
+		seven.extractStream('*.b').on('data', output => {
 			contents = Buffer.concat([contents, output]);
 		}).on('end', () => {
 			end = Date.now();

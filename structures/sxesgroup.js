@@ -1,3 +1,5 @@
+const path = require('path');
+
 const constants = require('../constants.json');
 
 const Position = require('./position.js');
@@ -12,6 +14,7 @@ module.exports = class SxesGroup {
 	constructor(uri) {
 		const fileType = constants.fileTypes[uri.split('.').pop()];
 		let type = fileType ? fileType : constants.fileTypes.DEFAULT;
+		uri = path.resolve(uri);
 
 		this.data = {
 			uri,
@@ -24,18 +27,27 @@ module.exports = class SxesGroup {
 			conditions: new Map(),
 			rawConditions: new Map()
 		};
+
+		this.toUpdate = {
+			metadata: false,
+			positions: [],
+			backgrounds: [],
+			conditions: [],
+			rawConditions: []
+		}
+
 	}
 
 	async initialize() {
 		const rawMeta = await this.archive.extract(constants.fileStructure.METADATA);
 		if (rawMeta.length !== 0)
-			this.data.metadata = JSON.parse(rawMeta);
+			this.data.metadata = JSON.parse(rawMeta.toString());
 		else
-			this.data.metadata = {};
+			throw "No metadata file found within the archive, are you sure this is a sxesgroup file?";
 
-		this.data.rawConditions = new Map((await this.archive.list(constants.fileStructure.RAWCONDITIONINLET)).map(({file}) => new RawCondition(file)).map(boi => [boi.uuid, boi]));
-		this.data.conditions = new Map((await this.archive.list(constants.fileStructure.CONDITIONINLET)).map(({file}) => new Condition(file)).map(boi => [boi.uuid, boi]));
-		this.data.backgrounds = new Map((await this.archive.list(constants.fileStructure.BACKGROUNDINLET)).map(({file}) => new Background(file)).map(boi => [boi.uuid, boi]));
+		this.data.rawConditions = new Map((await this.archive.list(constants.fileStructure.RAWCONDITIONINLET)).map((test) => new RawCondition(test.name)).map(boi => [boi.uuid, boi]));
+		this.data.conditions = new Map((await this.archive.list(constants.fileStructure.CONDITIONINLET)).map(({name}) => new Condition(name)).map(boi => [boi.uuid, boi]));
+		this.data.backgrounds = new Map((await this.archive.list(constants.fileStructure.BACKGROUNDINLET)).map(({name}) => new Background(name)).map(boi => [boi.uuid, boi]));
 
 		this.data.positions = new Map(await Promise.all((await this.archive.list(constants.fileStructure.POSITIONINLET))
 			.map(({file}) => new Position(this.archive, file)).map(async pos => [pos.uuid, await pos.initialize({
@@ -52,11 +64,35 @@ module.exports = class SxesGroup {
 			({uuid, name, comment, analysisUuids}) => new Project(this.archive, uuid, name, comment, new Map(analysisUuids.map(uuid => [uuid, this.getAnalysis(uuid)])))
 		).map(project => [project.uuid, project]));
 
+		this.data.metadata.analyses = [];
+		this.data.metadata.projects = [];
+
 		return this;
 	}
 
 	async save() {
+		// Metadata
+		if (this.toUpdate.metadata) {
+			this.toUpdate.metadata = false;
 
+			this.data.metadata.analyses = Array.from(this.getAnalyses().values());
+			this.data.metadata.projects = Array.from(this.getProjects().values());
+
+			await this.archive.update(constants.fileStructure.METADATA, JSON.stringify(this.data.metadata));
+			this.data.metadata.analyses = [];
+			this.data.metadata.projects = [];
+		}
+
+		// Save the components of the group
+		await Promise.all(['positions', 'backgrounds', 'conditions', 'rawConditions'].map(async type => {
+			let failed = await Promise.all(this.toUpdate[type].filter(async uuid => !!(await this.getPosition(uuid).save())));
+			let toUpdate = new Set(this.toUpdate.positions);
+
+			for (const uuid of failed)
+				toUpdate.add(uuid);
+
+			this.toUpdate.positions = Array.from(toUpdate.values());
+		}));
 	}
 
 	get archive() {
@@ -75,12 +111,17 @@ module.exports = class SxesGroup {
 		return this.data.projects.get(uuid);
 	}
 
-	addProject(project) {
+	async addProject(project) {
 		this.data.projects.set(project.uuid, project);
+		this.toUpdate.metadata = true;
+		await this.save();
+		return project;
 	}
 
-	deleteProject(uuid) {
+	async deleteProject(uuid) {
 		this.data.projects.delete(uuid);
+		this.toUpdate.metadata = true;
+		await this.save();
 	}
 
 	getAnalyses() {
@@ -91,12 +132,17 @@ module.exports = class SxesGroup {
 		return this.data.analyses.get(uuid);
 	}
 
-	addAnalysis(analysis) {
+	async addAnalysis(analysis) {
 		this.data.analyses.set(analysis.uuid, analysis);
+		this.toUpdate.metadata = true;
+		await this.save();
+		return analysis;
 	}
 
-	deleteAnalysis(uuid) {
+	async deleteAnalysis(uuid) {
 		this.data.analyses.delete(uuid);
+		this.toUpdate.metadata = true;
+		await this.save();
 	}
 
 	getPositions() {
@@ -107,12 +153,15 @@ module.exports = class SxesGroup {
 		return this.data.positions.get(uuid);
 	}
 
-	addPosition(position) {
+	async addPosition(position) {
+		position = await position.cloneTo(this.archive);
 		this.data.positions.set(position.uuid, position);
+		return position;
 	}
 
-	deletePosition(uuid) {
+	async deletePosition(uuid) {
 		this.data.positions.delete(uuid);
+		await this.save();
 	}
 
 	getBackgrounds() {
@@ -123,12 +172,16 @@ module.exports = class SxesGroup {
 		return this.data.backgrounds.get(uuid);
 	}
 
-	addBackground(background) {
+	async addBackground(background) {
+		background = background.cloneTo(this.archive);
 		this.data.backgrounds.set(background.uuid, background);
+		await this.save();
+		return background;
 	}
 
-	deleteBackground(uuid) {
+	async deleteBackground(uuid) {
 		this.data.backgrounds.delete(uuid);
+		await this.save();
 	}
 
 	getConditions() {
@@ -139,12 +192,16 @@ module.exports = class SxesGroup {
 		return this.data.conditions.get(uuid);
 	}
 
-	addCondition(condition) {
+	async addCondition(condition) {
+		condition = condition.cloneTo(this.archive);
 		this.data.conditions.set(condition.uuid, condition);
+		await condition.save();
+		return condition;
 	}
 
-	deleteCondition(uuid) {
+	async deleteCondition(uuid) {
 		this.data.conditions.delete(uuid);
+		await this.save();
 	}
 
 	getRawConditions() {
@@ -155,11 +212,15 @@ module.exports = class SxesGroup {
 		return this.data.rawConditions.get(uuid);
 	}
 
-	addRawCondition(rawCondition) {
+	async addRawCondition(rawCondition) {
+		rawCondition = rawCondition.cloneTo(this.archive);
 		this.data.rawConditions.set(rawCondition.uuid, rawCondition);
+		await rawCondition.save();
+		return rawCondition;
 	}
 
-	deleteRawCondition(uuid) {
+	async deleteRawCondition(uuid) {
 		this.data.rawConditions.delete(uuid);
+		await this.save();
 	}
 };

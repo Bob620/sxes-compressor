@@ -2,6 +2,7 @@
   "name": "sxes-compressor",
   "version": "1.0.0",
   "author": "Bob620",
+  "main": "index.js",
   "dependencies": {
     "7zip-bin": "^5.0.3"
   }

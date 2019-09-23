@@ -1,5 +1,6 @@
 const constants = require('../constants.json');
 
+const generateUuid = require('../generateuuid.js');
 const State = require('./state.js');
 const makeData = require('../makedata.js');
 
@@ -81,5 +82,29 @@ module.exports = class Position {
 
 	setComment(comment) {
 
+	}
+
+	async cloneTo(sxesGroup) {
+		const uuid = generateUuid.v4();
+
+		await Promise.all(await this.data.archive.list(this.data.uri).filter(({name}) => name !== constants.fileStructure.position.METAFILE).map(async ({name}) => {
+			await sxesGroup.archive.updateStream(`${constants.fileStructure.position.ROOT}/${uuid}/${name.split('/').pop()}`, this.data.archive.extractStream(name));
+		}));
+
+		let newMeta = {
+			[constants.positionMeta.UUID]: uuid,
+			[constants.positionMeta.COMMENT]: this.getComment(),
+			[constants.positionMeta.BACKGROUNDUUID]: this.background.uuid,
+			[constants.positionMeta.CONDITIONUUID]: this.condition.uuid,
+			[constants.positionMeta.RAWCONDTIONUUID]: this.rawCondition.uuid
+		};
+
+		await sxesGroup.archive.update(`${constants.fileStructure.position.ROOT}/${uuid}/${constants.fileStructure.position.METAFILE}`, JSON.stringify(newMeta));
+
+		return await (new Position(sxesGroup.archive, `${constants.fileStructure.position.ROOT}/${uuid}/${constants.fileStructure.position.METAFILE}`)).initialize({
+			rawConditions: sxesGroup.getRawConditions(),
+			conditions: sxesGroup.getConditions(),
+			backgrounds: sxesGroup.getBackgrounds()
+		});
 	}
 };

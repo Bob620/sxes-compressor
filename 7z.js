@@ -24,7 +24,7 @@ module.exports = class SevenZip {
 		return this.data.type;
 	}
 
-	list(match='*') {
+	list(match='*', includeDirectories=false) {
 		return new Promise(resolve => {
 			const child = spawn(this.bin, ['l', this.uri, '-so', match, `${this.type !== '' ? `-t${this.type}` : ''}`].filter(option => option));
 			let output = Buffer.concat([]);
@@ -33,22 +33,28 @@ module.exports = class SevenZip {
 			});
 			child.stdout.on('end', () => {
 				output = output.toString().split('\n');
-				const files = parseInt(output[output.length - 2].split(' ').filter(char => char)[4]);
-				if (!isNaN(files)) {
+				const filesFolders = output[output.length - 2].trim().split(' ').filter(char => char && char !== 'files,' && char !== 'files' && char !== 'folders');
+				const totalFiles = parseInt(filesFolders[4]) + (filesFolders[5] ? parseInt(filesFolders[5]) : 0);
+				if (!isNaN(totalFiles)) {
 					const itemLengths = output[output.length - 3].split(' ').map(item => item.length);
-					resolve(output.slice((-3) - files, -3).map(line => line.trim().split('')).map(item => {
+					const files = output.slice((-3) - totalFiles, -3).map(line => line.trim().split('')).map(item => {
 						let info = {
 							datetime: item.splice(0, itemLengths[0]).join('').trim(),
 							attr: item.splice(0, itemLengths[1] + 1).join('').trim(),
 							size: parseInt(item.splice(0, itemLengths[2] + 1).join('').trim()),
 							compressedSize: parseInt(item.splice(0, itemLengths[3] + 1).join('').trim()),
-							name: item.splice(0, itemLengths[5] + 2).join('').trim()
+							name: item.splice(0, itemLengths[5] + 2).join('').trim().replace('\\', '/')
 						};
 						if (isNaN(info.compressedSize))
 							info.compressedSize = 0;
 
 						return info;
-					}));
+					});
+
+					if (includeDirectories)
+						resolve(files);
+					else
+						resolve(files.filter(({attr}) => attr[0] !== 'D'));
 				} else
 					resolve([]);
 			});
@@ -98,7 +104,7 @@ module.exports = class SevenZip {
 		});
 	}
 
-	streamExtract(match='*') {
+	extractStream(match='*') {
 		return spawn(this.bin, ['e', this.uri, '-so', match, `${this.type !== '' ? `-t${this.type}` : ''}`].filter(option => option)).stdout;
 	}
 };

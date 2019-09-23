@@ -1,6 +1,9 @@
-const SxesGroup = require('./structures/sxesgroup.js');
+const createGroup = require('./creategroup.js');
+const constants = require('./constants.json');
 
-const test = new SxesGroup('./test/test.zip');
-test.initialize().then(group => {
-	console.log('test');
-});
+
+module.exports = {
+	SxesGroup: require('./structures/sxesgroup.js'),
+	createPLZip: createGroup.bind(undefined, constants.fileTypes.plzip),
+	createPL7z: createGroup.bind(undefined, constants.fileTypes.pl7z)
+};

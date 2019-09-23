@@ -13,13 +13,21 @@
     "CONDITIONINLET": "conditions/*",
     "RAWCONDITIONINLET": "rawConditions/*",
     "position": {
+      "ROOT": "data",
       "METAFILE": "info.json",
       "STATE": "state.json",
       "DATA": "*.data"
     },
     "background": {
+      "ROOT": "backgrounds",
       "METAFILE": "info.json",
       "DATA": "*.data"
+    },
+    "condition": {
+      "ROOT": "conditions"
+    },
+    "rawCondition": {
+      "ROOT": "rawConditions"
     }
   },
   "metaMeta": {
