@@ -1,3 +1,5 @@
+const constants = require('../constants.json');
+
 module.exports = class Background {
 	constructor(archive, uri) {
 		this.data = {
@@ -7,7 +9,20 @@ module.exports = class Background {
 		}
 	}
 
+	get hash() {
+		return this.data.uuid;
+	}
+
 	getBackground() {
 		return this.data.archive.extract(this.data.uri);
+	}
+
+	async permDelete() {
+		return await Promise.all(await this.data.archive.delete(this.data.uri));
+	}
+
+	async cloneTo(sxesGroup) {
+		await sxesGroup.archive.updateStream(`${constants.fileStructure.background.ROOT}/${this.hash}.json`, this.data.archive.extractStream(this.data.uri));
+		return new Background(sxesGroup.archive, `${constants.fileStructure.background.ROOT}/${this.hash}.json`);
 	}
 };

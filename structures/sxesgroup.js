@@ -160,8 +160,9 @@ module.exports = class SxesGroup {
 	}
 
 	async deletePosition(uuid) {
+		const position = this.getPosition(uuid);
 		this.data.positions.delete(uuid);
-		await this.save();
+		await position.permDelete();
 	}
 
 	getBackgrounds() {
@@ -175,13 +176,13 @@ module.exports = class SxesGroup {
 	async addBackground(background) {
 		background = background.cloneTo(this.archive);
 		this.data.backgrounds.set(background.uuid, background);
-		await this.save();
 		return background;
 	}
 
 	async deleteBackground(uuid) {
+		const background = this.getBackground(uuid);
 		this.data.backgrounds.delete(uuid);
-		await this.save();
+		await background.permDelete();
 	}
 
 	getConditions() {
@@ -195,13 +196,13 @@ module.exports = class SxesGroup {
 	async addCondition(condition) {
 		condition = condition.cloneTo(this.archive);
 		this.data.conditions.set(condition.uuid, condition);
-		await condition.save();
 		return condition;
 	}
 
 	async deleteCondition(uuid) {
+		const condition = this.getCondition(uuid);
 		this.data.conditions.delete(uuid);
-		await this.save();
+		await condition.permDelete();
 	}
 
 	getRawConditions() {
@@ -215,12 +216,12 @@ module.exports = class SxesGroup {
 	async addRawCondition(rawCondition) {
 		rawCondition = rawCondition.cloneTo(this.archive);
 		this.data.rawConditions.set(rawCondition.uuid, rawCondition);
-		await rawCondition.save();
 		return rawCondition;
 	}
 
 	async deleteRawCondition(uuid) {
+		const rawCondition = this.getRawCondition(uuid);
 		this.data.rawConditions.delete(uuid);
-		await this.save();
+		await rawCondition.permDelete();
 	}
 };

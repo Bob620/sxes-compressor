@@ -84,6 +84,10 @@ module.exports = class Position {
 
 	}
 
+	async permDelete() {
+		return await Promise.all(await this.data.archive.delete(this.data.uri));
+	}
+
 	async cloneTo(sxesGroup) {
 		const uuid = generateUuid.v4();
 
@@ -100,6 +104,10 @@ module.exports = class Position {
 		};
 
 		await sxesGroup.archive.update(`${constants.fileStructure.position.ROOT}/${uuid}/${constants.fileStructure.position.METAFILE}`, JSON.stringify(newMeta));
+
+		await sxesGroup.addBackground(this.background);
+		await sxesGroup.addCondition(this.condition);
+		await sxesGroup.addRawCondition(this.rawCondition);
 
 		return await (new Position(sxesGroup.archive, `${constants.fileStructure.position.ROOT}/${uuid}/${constants.fileStructure.position.METAFILE}`)).initialize({
 			rawConditions: sxesGroup.getRawConditions(),
