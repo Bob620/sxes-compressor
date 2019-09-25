@@ -8,13 +8,7 @@ module.exports = class State {
 		}
 	}
 
-	async initialize() {
-		this.data.store = JSON.parse(await this.data.archive.extract(this.data.uri));
-
-		return this;
-	}
-
 	getState() {
-		return JSON.parse(JSON.stringify(this.data.store));
+		return JSON.parse(JSON.stringify(this.data.store).toString());
 	}
 };

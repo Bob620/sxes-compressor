@@ -9,14 +9,15 @@
   "fileStructure": {
     "METADATA": "metadata.json",
     "POSITIONINLET": "data/*/info.json",
-    "BACKGROUNDINLET": "backgrounds/*/info.json",
+    "BACKGROUNDINLET": "backgrounds/*",
     "CONDITIONINLET": "conditions/*",
     "RAWCONDITIONINLET": "rawConditions/*",
     "position": {
       "ROOT": "data",
       "METAFILE": "info.json",
       "STATE": "state.json",
-      "DATA": "*.data"
+      "DATA": "*.data",
+      "DATAEXTENTION": "data"
     },
     "background": {
       "ROOT": "backgrounds",

@@ -9,12 +9,16 @@ module.exports = class RawCondition {
 		}
 	}
 
+	get uuid() {
+		return this.data.uuid;
+	}
+
 	get hash() {
 		return this.data.uuid;
 	}
 
 	async getRawCondition() {
-		return JSON.parse(await this.data.archive.extract(this.data.uri));
+		return JSON.parse((await this.data.archive.extract(this.data.uri)).toString());
 	}
 
 	async permDelete() {

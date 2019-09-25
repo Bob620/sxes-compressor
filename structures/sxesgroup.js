@@ -45,12 +45,12 @@ module.exports = class SxesGroup {
 		else
 			throw "No metadata file found within the archive, are you sure this is a sxesgroup file?";
 
-		this.data.rawConditions = new Map((await this.archive.list(constants.fileStructure.RAWCONDITIONINLET)).map((test) => new RawCondition(test.name)).map(boi => [boi.uuid, boi]));
-		this.data.conditions = new Map((await this.archive.list(constants.fileStructure.CONDITIONINLET)).map(({name}) => new Condition(name)).map(boi => [boi.uuid, boi]));
-		this.data.backgrounds = new Map((await this.archive.list(constants.fileStructure.BACKGROUNDINLET)).map(({name}) => new Background(name)).map(boi => [boi.uuid, boi]));
+		this.data.rawConditions = new Map((await this.archive.list(constants.fileStructure.RAWCONDITIONINLET)).map(({name}) => new RawCondition(this.archive, name)).map(boi => [boi.uuid, boi]));
+		this.data.conditions = new Map((await this.archive.list(constants.fileStructure.CONDITIONINLET)).map(({name}) => new Condition(this.archive, name)).map(boi => [boi.uuid, boi]));
+		this.data.backgrounds = new Map((await this.archive.list(constants.fileStructure.BACKGROUNDINLET)).map(({name}) => new Background(this.archive, name)).map(boi => [boi.uuid, boi]));
 
 		this.data.positions = new Map(await Promise.all((await this.archive.list(constants.fileStructure.POSITIONINLET))
-			.map(({file}) => new Position(this.archive, file)).map(async pos => [pos.uuid, await pos.initialize({
+			.map(({name}) => new Position(this.archive, name)).map(async pos => [pos.uuid, await pos.initialize({
 				rawConditions: this.getRawConditions(),
 				conditions: this.getConditions(),
 				backgrounds: this.getBackgrounds()

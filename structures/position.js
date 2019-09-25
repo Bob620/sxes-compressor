@@ -15,18 +15,16 @@ module.exports = class Position {
 			condition: undefined,
 			rawCondition: undefined,
 			comment: '',
-			state: new State(archive, uri + '/' + constants.fileStructure.position.STATE),
+			state: new State(archive, uriSplit.slice(0, 2).join('/') + '/' + constants.fileStructure.position.STATE),
 			data: new Map()
 		}
 	}
 
 	async initialize({rawConditions, conditions, backgrounds}) {
-		const metadata = JSON.parse(await this.data.archive.extract(this.data.uri + '/' + constants.fileStructure.position.METAFILE));
+		const metadata = JSON.parse((await this.data.archive.extract(this.data.uri + '/' + constants.fileStructure.position.METAFILE)).toString());
 
 		if (this.uuid !== metadata[constants.positionMeta.UUID])
 			console.warn(`Expected ${this.uuid}, got ${metadata[constants.positionMeta.UUID]}`);
-
-		await this.data.state.initialize();
 
 		this.data.rawCondition = rawConditions.get(metadata[constants.positionMeta.RAWCONDTIONUUID]);
 		this.data.condition = conditions.get(metadata[constants.positionMeta.CONDITIONUUID]);
@@ -34,7 +32,7 @@ module.exports = class Position {
 		this.data.comment = metadata[constants.positionMeta.COMMENT];
 
 		this.data.data = new Map((await this.data.archive.list(this.data.uri + '/' + constants.fileStructure.position.DATA))
-			.map(({file}) => file).map(uri => makeData(this.data.archive, uri)).map(data => [data.name, data])
+			.map(({name}) => name).map(uri => makeData(this.data.archive, uri)).map(data => [data.name, data])
 		);
 
 		return this;

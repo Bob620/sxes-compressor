@@ -43,7 +43,7 @@ module.exports = class SevenZip {
 							attr: item.splice(0, itemLengths[1] + 1).join('').trim(),
 							size: parseInt(item.splice(0, itemLengths[2] + 1).join('').trim()),
 							compressedSize: parseInt(item.splice(0, itemLengths[3] + 1).join('').trim()),
-							name: item.splice(0, itemLengths[5] + 2).join('').trim().replace('\\', '/')
+							name: item.join('').trim().replace(/\\/g, '/')
 						};
 						if (isNaN(info.compressedSize))
 							info.compressedSize = 0;
@@ -87,7 +87,7 @@ module.exports = class SevenZip {
 
 	updateStream(fileName, inputStream) {
 		return new Promise(resolve => {
-			const child = spawn(this.bin, ['a', this.uri, `-si${fileName}`, `${this.type !== '' ? `-t${this.type}` : ''}`].filter(option => option));
+			const child = spawn(this.bin, ['u', this.uri, `-si${fileName}`, `${this.type !== '' ? `-t${this.type}` : ''}`].filter(option => option));
 			inputStream.pipe(child.stdin);
 			child.stdout.on('end', () => {
 				resolve();
