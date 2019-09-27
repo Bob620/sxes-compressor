@@ -95,6 +95,15 @@ module.exports = class SevenZip {
 		});
 	}
 
+	addFrom(uri, deleteOnceDone) {
+		return new Promise(resolve => {
+			const child = spawn(this.bin, ['a', this.uri, uri, `${this.type !== '' ? `-t${this.type}` : ''}`, deleteOnceDone ? '-sdel' : ''].filter(option => option));
+			child.stdout.on('end', () => {
+				resolve();
+			});
+		});
+	}
+
 	delete(match) {
 		return new Promise(resolve => {
 			const child = spawn(this.bin, ['d', this.uri, match, `${this.type !== '' ? `-t${this.type}` : ''}`].filter(option => option));
