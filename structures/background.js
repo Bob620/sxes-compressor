@@ -9,6 +9,10 @@ module.exports = class Background {
 		}
 	}
 
+	get uuid() {
+		return this.data.uuid;
+	}
+
 	get hash() {
 		return this.data.uuid;
 	}
