@@ -5,35 +5,48 @@ const State = require('./state.js');
 const makeData = require('../makedata.js');
 
 module.exports = class Position {
-	constructor(archive, uri) {
+	constructor(archive, uri, dataFiles=[]) {
 		const uriSplit = uri.split('/');
+		uri = uriSplit.slice(0, 2).join('/');
 		this.data = {
 			uuid: uriSplit[1],
-			uri: uriSplit.slice(0, 2).join('/'),
+			uri,
 			archive,
 			background: undefined,
 			condition: undefined,
 			rawCondition: undefined,
 			comment: '',
-			state: new State(archive, uriSplit.slice(0, 2).join('/') + '/' + constants.fileStructure.position.STATE),
-			data: new Map()
+			state: new State(archive, `${uri}/${constants.fileStructure.position.STATE}`),
+			data: new Map(dataFiles.map(uri => makeData(archive, uri)).map(data => [data.name, data])),
+			initId: undefined,
+			resolves: [],
+			onLoad: () => {}
 		}
 	}
 
-	async initialize({rawConditions, conditions, backgrounds}) {
-		const metadata = JSON.parse((await this.data.archive.extract(this.data.uri + '/' + constants.fileStructure.position.METAFILE)).toString());
+	async loadFiles() {
+		this.data.initId = `${this.uuid}-init`;
+		const metadata = JSON.parse((await this.data.archive.extract(this.data.uri + '/' + constants.fileStructure.position.METAFILE, this.data.initId)).toString());
 
-		if (this.uuid !== metadata[constants.positionMeta.UUID])
-			console.warn(`Expected ${this.uuid}, got ${metadata[constants.positionMeta.UUID]}`);
+		this.data.onLoad(metadata);
+	}
 
-		this.data.rawCondition = rawConditions.get(metadata[constants.positionMeta.RAWCONDTIONUUID]);
-		this.data.condition = conditions.get(metadata[constants.positionMeta.CONDITIONUUID]);
-		this.data.background = backgrounds.get(metadata[constants.positionMeta.BACKGROUNDUUID]);
-		this.data.comment = metadata[constants.positionMeta.COMMENT];
+	async initialize({rawConditions, conditions, backgrounds}, backgroundLoad) {
+		this.data.onLoad = metadata => {
+			if (this.uuid !== metadata[constants.positionMeta.UUID])
+				console.warn(`Expected ${this.uuid}, got ${metadata[constants.positionMeta.UUID]}`);
 
-		this.data.data = new Map((await this.data.archive.list(this.data.uri + '/' + constants.fileStructure.position.DATA))
-			.map(({name}) => name).map(uri => makeData(this.data.archive, uri)).map(data => [data.name, data])
-		);
+			this.data.rawCondition = rawConditions.get(metadata[constants.positionMeta.RAWCONDTIONUUID]);
+			this.data.condition = conditions.get(metadata[constants.positionMeta.CONDITIONUUID]);
+			this.data.background = backgrounds.get(metadata[constants.positionMeta.BACKGROUNDUUID]);
+			this.data.comment = metadata[constants.positionMeta.COMMENT];
+
+			for (const resolve of this.data.resolves)
+				resolve();
+		};
+
+		if (backgroundLoad)
+			await this.loadFiles();
 
 		return this;
 	}
@@ -43,15 +56,48 @@ module.exports = class Position {
 	}
 
 	get background() {
-		return this.data.background;
+		return new Promise((resolve, reject) => {
+			if (this.data.background)
+				return this.data.background;
+			else {
+				this.data.resolves.push(() => resolve(this.data.background));
+
+				if (this.data.initId)
+					this.data.archive.expedite(this.data.initId);
+				else
+					this.loadFiles();
+			}
+		});
 	}
 
 	get condition() {
-		return this.data.condition;
+		return new Promise((resolve, reject) => {
+			if (this.data.condition)
+				return this.data.condition;
+			else {
+				this.data.resolves.push(() => resolve(this.data.condition));
+
+				if (this.data.initId)
+					this.data.archive.expedite(this.data.initId);
+				else
+					this.loadFiles();
+			}
+		});
 	}
 
 	get rawCondition() {
-		return this.data.rawCondition;
+		return new Promise((resolve, reject) => {
+			if (this.data.rawCondition)
+				return this.data.rawCondition;
+			else {
+				this.data.resolves.push(() => resolve(this.data.rawCondition));
+
+				if (this.data.initId)
+					this.data.archive.expedite(this.data.initId);
+				else
+					this.loadFiles();
+			}
+		});
 	}
 
 	get state() {
@@ -95,17 +141,17 @@ module.exports = class Position {
 
 		let newMeta = {
 			[constants.positionMeta.UUID]: uuid,
-			[constants.positionMeta.COMMENT]: this.getComment(),
-			[constants.positionMeta.BACKGROUNDUUID]: this.background.uuid,
-			[constants.positionMeta.CONDITIONUUID]: this.condition.uuid,
-			[constants.positionMeta.RAWCONDTIONUUID]: this.rawCondition.uuid
+			[constants.positionMeta.COMMENT]: await this.getComment(),
+			[constants.positionMeta.BACKGROUNDUUID]: (await this.background).uuid,
+			[constants.positionMeta.CONDITIONUUID]: (await this.condition).uuid,
+			[constants.positionMeta.RAWCONDTIONUUID]: (await this.rawCondition).uuid
 		};
 
 		await sxesGroup.archive.update(`${constants.fileStructure.position.ROOT}/${uuid}/${constants.fileStructure.position.METAFILE}`, JSON.stringify(newMeta));
 
-		await sxesGroup.addBackground(this.background);
-		await sxesGroup.addCondition(this.condition);
-		await sxesGroup.addRawCondition(this.rawCondition);
+		await sxesGroup.addBackground(await this.background);
+		await sxesGroup.addCondition(await this.condition);
+		await sxesGroup.addRawCondition(await this.rawCondition);
 
 		return await (new Position(sxesGroup.archive, `${constants.fileStructure.position.ROOT}/${uuid}/${constants.fileStructure.position.METAFILE}`)).initialize({
 			rawConditions: sxesGroup.getRawConditions(),

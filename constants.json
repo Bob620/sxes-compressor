@@ -1,4 +1,5 @@
 {
+  "7zMaxChildren": 20,
   "fileTypes": {
     "DEFAULT": "zip",
     "plzip": "zip",

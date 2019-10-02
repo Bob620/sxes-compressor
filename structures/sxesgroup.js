@@ -38,24 +38,64 @@ module.exports = class SxesGroup {
 
 	}
 
-	async initialize() {
+	async initialize(backgroundLoad=false) {
 		const rawMeta = await this.archive.extract(constants.fileStructure.METADATA);
 		if (rawMeta.length !== 0)
 			this.data.metadata = JSON.parse(rawMeta.toString());
 		else
 			throw "No metadata file found within the archive, are you sure this is a sxesgroup file?";
 
-		this.data.rawConditions = new Map((await this.archive.list(constants.fileStructure.RAWCONDITIONINLET)).map(({name}) => new RawCondition(this.archive, name)).map(boi => [boi.uuid, boi]));
-		this.data.conditions = new Map((await this.archive.list(constants.fileStructure.CONDITIONINLET)).map(({name}) => new Condition(this.archive, name)).map(boi => [boi.uuid, boi]));
-		this.data.backgrounds = new Map((await this.archive.list(constants.fileStructure.BACKGROUNDINLET)).map(({name}) => new Background(this.archive, name)).map(boi => [boi.uuid, boi]));
+		const allItems = (await this.archive.list('*/*')).reduce((data, {name: path}) => {
+			const [dir, file, subfile=''] = path.split('/');
+			switch (dir) {
+				case constants.fileStructure.position.ROOT:
+					let pos = data.positions.get(file);
+					if (pos === undefined) {
+						pos = {
+							root: `${dir}/${file}`,
+							data: []
+						};
+						data.positions.set(file, pos);
+					}
 
-		this.data.positions = new Map(await Promise.all((await this.archive.list(constants.fileStructure.POSITIONINLET))
-			.map(({name}) => new Position(this.archive, name)).map(async pos => [pos.uuid, await pos.initialize({
+					if (subfile.endsWith(constants.fileStructure.position.DATAEXTENTION))
+						pos.data.push(`${pos.root}/${subfile}`);
+					break;
+				case constants.fileStructure.background.ROOT:
+					const background = new Background(this.archive, path);
+					data.backgrounds.set(background.uuid, background);
+					break;
+				case constants.fileStructure.condition.ROOT:
+					const cond = new Condition(this.archive, path);
+					data.conditions.set(cond.uuid, cond);
+					break;
+				case constants.fileStructure.rawCondition.ROOT:
+					const rawCond = new RawCondition(this.archive, path);
+					data.rawConditions.set(rawCond.uuid, rawCond);
+					break;
+			}
+
+			return data;
+		}, {
+			backgrounds: new Map(),
+			conditions: new Map(),
+			rawConditions: new Map(),
+			positions: new Map(),
+		});
+
+		this.data.rawConditions = allItems.rawConditions;
+		this.data.conditions = allItems.conditions;
+		this.data.backgrounds = allItems.backgrounds;
+
+		this.data.positions = new Map(Array.from(allItems.positions.values()).map(({root, data}) => new Position(this.archive, root, data)).map(pos => {
+			pos.initialize({
 				rawConditions: this.getRawConditions(),
 				conditions: this.getConditions(),
 				backgrounds: this.getBackgrounds()
-			})]))
-		);
+			}, backgroundLoad);
+
+			return [pos.uuid, pos];
+		}));
 
 		this.data.analyses = new Map(this.data.metadata[constants.metaMeta.ANALYSES].map(
 			({uuid, name, comment, positionUuids}) => new Analysis(this.archive, uuid, name, comment, new Map(positionUuids.map(uuid => [uuid, this.getPosition(uuid)])))
