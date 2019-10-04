@@ -42,5 +42,8 @@
     "BACKGROUNDUUID": "backgroundUuid",
     "UUID": "uuid",
     "COMMENT": "comment"
+  },
+  "background": {
+    "DATAOFFSET": 8
   }
 }

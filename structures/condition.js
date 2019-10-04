@@ -17,7 +17,7 @@ module.exports = class Condition {
 		return this.data.uuid;
 	}
 
-	async getCondition() {
+	async getData() {
 		return JSON.parse((await this.data.archive.extract(this.data.uri)).toString());
 	}
 

@@ -1,5 +1,7 @@
 const constants = require('../constants.json');
 
+const Data = require('./data.js');
+
 module.exports = class Background {
 	constructor(archive, uri) {
 		this.data = {
@@ -17,8 +19,8 @@ module.exports = class Background {
 		return this.data.uuid;
 	}
 
-	getBackground() {
-		return this.data.archive.extract(this.data.uri);
+	async getData(condition) {
+		return new BgData(this.data.archive, this.data.uri, await this.data.archive.extract(this.data.uri), await (await condition).getData());
 	}
 
 	async permDelete() {
@@ -30,3 +32,16 @@ module.exports = class Background {
 		return new Background(sxesGroup.archive, `${constants.fileStructure.background.ROOT}/${this.hash}.json`);
 	}
 };
+
+class BgData extends Data {
+	constructor(archive, uri, rawData=Buffer.from([]), condition) {
+		super(archive, uri, rawData, constants.background.DATAOFFSET, condition.ccd.bins.x, rawData.readUInt32LE(4));
+	}
+
+	get(bin=0, position=0) {
+		if (bin < this.bins && position <= this.positions)
+			return this.rawData.readUInt32LE(this.data.offset + (4 * (bin * this.positions + position)));
+		else
+			throw `Out of bounds error: Wanted bin ${bin}, pos ${position}; max is bin ${this.bins}, pos ${this.positions}`;
+	}
+}

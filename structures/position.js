@@ -38,7 +38,16 @@ module.exports = class Position {
 
 			this.data.rawCondition = rawConditions.get(metadata[constants.positionMeta.RAWCONDTIONUUID]);
 			this.data.condition = conditions.get(metadata[constants.positionMeta.CONDITIONUUID]);
-			this.data.background = backgrounds.get(metadata[constants.positionMeta.BACKGROUNDUUID]);
+
+			const background = backgrounds.get(metadata[constants.positionMeta.BACKGROUNDUUID]);
+			if (background)
+				this.data.background = {
+					uuid: background.uuid,
+					hash: background.hash,
+					getData: background.getData.bind(background, this.condition),
+					permDelete: background.permDelete,
+					cloneTo: background.cloneTo
+				};
 			this.data.comment = metadata[constants.positionMeta.COMMENT];
 
 			for (const resolve of this.data.resolves)
@@ -58,7 +67,7 @@ module.exports = class Position {
 	get background() {
 		return new Promise((resolve, reject) => {
 			if (this.data.background)
-				return this.data.background;
+				resolve(this.data.background);
 			else {
 				this.data.resolves.push(() => resolve(this.data.background));
 
@@ -73,7 +82,7 @@ module.exports = class Position {
 	get condition() {
 		return new Promise((resolve, reject) => {
 			if (this.data.condition)
-				return this.data.condition;
+				resolve(this.data.condition);
 			else {
 				this.data.resolves.push(() => resolve(this.data.condition));
 
@@ -88,7 +97,7 @@ module.exports = class Position {
 	get rawCondition() {
 		return new Promise((resolve, reject) => {
 			if (this.data.rawCondition)
-				return this.data.rawCondition;
+				resolve(this.data.rawCondition);
 			else {
 				this.data.resolves.push(() => resolve(this.data.rawCondition));
 
@@ -121,7 +130,18 @@ module.exports = class Position {
 	}
 
 	getComment() {
-		return this.data.comment;
+		return new Promise((resolve, reject) => {
+			if (this.data.comment)
+				resolve(this.data.comment);
+			else {
+				this.data.resolves.push(() => resolve(this.data.comment));
+
+				if (this.data.initId)
+					this.data.archive.expedite(this.data.initId);
+				else
+					this.loadFiles();
+			}
+		});
 	}
 
 	setComment(comment) {
