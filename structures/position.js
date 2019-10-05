@@ -15,9 +15,10 @@ module.exports = class Position {
 			background: undefined,
 			condition: undefined,
 			rawCondition: undefined,
+			dataFiles,
 			comment: '',
 			state: new State(archive, `${uri}/${constants.fileStructure.position.STATE}`),
-			data: new Map(dataFiles.map(uri => makeData(archive, uri)).map(data => [data.name, data])),
+			data: undefined,
 			initId: undefined,
 			resolves: [],
 			onLoad: () => {}
@@ -65,7 +66,7 @@ module.exports = class Position {
 	}
 
 	get background() {
-		return new Promise((resolve, reject) => {
+		return new Promise(resolve => {
 			if (this.data.background)
 				resolve(this.data.background);
 			else {
@@ -80,7 +81,7 @@ module.exports = class Position {
 	}
 
 	get condition() {
-		return new Promise((resolve, reject) => {
+		return new Promise(resolve => {
 			if (this.data.condition)
 				resolve(this.data.condition);
 			else {
@@ -95,7 +96,7 @@ module.exports = class Position {
 	}
 
 	get rawCondition() {
-		return new Promise((resolve, reject) => {
+		return new Promise(resolve => {
 			if (this.data.rawCondition)
 				resolve(this.data.rawCondition);
 			else {
@@ -114,11 +115,25 @@ module.exports = class Position {
 	}
 
 	getTypes() {
-		return this.data.data;
+		return new Promise(async resolve => {
+			if (this.data.data)
+				resolve(this.data.data);
+			else {
+				const test = await Promise.all(this.data.dataFiles.map(async uri => makeData(this.data.archive, uri, await (await this.condition).getData())));
+				this.data.data = new Map(test.map(data => [data.name, data]));
+				resolve(this.data.data);
+			}
+		});
 	}
 
-	getType(name) {
-		return this.data.data.get(type);
+	getType(type) {
+		return new Promise(async resolve => {
+			if (this.data.data)
+				resolve(this.data.data.get(type));
+			else {
+				resolve((await this.getTypes()).get(type));
+			}
+		});
 	}
 
 	addType(data) {

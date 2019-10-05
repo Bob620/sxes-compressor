@@ -37,11 +37,4 @@ class BgData extends Data {
 	constructor(archive, uri, rawData=Buffer.from([]), condition) {
 		super(archive, uri, rawData, constants.background.DATAOFFSET, condition.ccd.bins.x, rawData.readUInt32LE(4));
 	}
-
-	get(bin=0, position=0) {
-		if (bin < this.bins && position <= this.positions)
-			return this.rawData.readUInt32LE(this.data.offset + (4 * (bin * this.positions + position)));
-		else
-			throw `Out of bounds error: Wanted bin ${bin}, pos ${position}; max is bin ${this.bins}, pos ${this.positions}`;
-	}
 }
