@@ -44,10 +44,15 @@ module.exports = class Position {
 	}
 
 	async loadFiles() {
-		this.data.initId = `${this.uuid}-init`;
-		const metadata = JSON.parse((await this.data.archive.extract(this.data.uri + '/' + constants.fileStructure.position.METAFILE, this.data.initId)).toString());
+		if (this.data.initId)
+			this.data.archive.expedite(this.data.initId);
+		else {
+			this.data.initId = `${this.uuid}-init`;
+			const metadata = JSON.parse((await this.data.archive.extract(this.data.uri + '/' + constants.fileStructure.position.METAFILE, this.data.initId)).toString());
 
-		await this.data.onLoad(metadata);
+			await this.data.onLoad(metadata);
+			this.data.initId = undefined;
+		}
 	}
 
 	async initialize({rawConditions, conditions, backgrounds}, backgroundLoad) {
@@ -75,6 +80,8 @@ module.exports = class Position {
 
 			for (const resolve of this.data.resolves)
 				resolve();
+
+			this.data.resolves = [];
 		};
 
 		if (backgroundLoad)
