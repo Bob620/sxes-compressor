@@ -98,7 +98,7 @@ module.exports = class SxesGroup {
 		}));
 
 		this.data.analyses = new Map(this.data.metadata[constants.metaMeta.ANALYSES].map(
-			({uuid, name, comment, positionUuids}) => new Analysis(this.archive, uuid, name, comment, new Map(positionUuids.map(uuid => [uuid, this.getPosition(uuid)])))
+			data => new Analysis(this.archive, data, new Map(data.positionUuids.map(uuid => [uuid, this.getPosition(uuid)])))
 		).map(analysis => [analysis.uuid, analysis]));
 		this.data.projects = new Map(this.data.metadata[constants.metaMeta.PROJECTS].map(
 			({uuid, name, comment, analysisUuids}) => new Project(this.archive, uuid, name, comment, new Map(analysisUuids.map(uuid => [uuid, this.getAnalysis(uuid)])))

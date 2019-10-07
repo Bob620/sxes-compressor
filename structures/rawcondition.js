@@ -17,7 +17,7 @@ module.exports = class RawCondition {
 		return this.data.uuid;
 	}
 
-	async getRawCondition() {
+	async getData() {
 		return JSON.parse((await this.data.archive.extract(this.data.uri)).toString());
 	}
 

@@ -35,4 +35,8 @@ class QlwData extends Data {
 		else
 			throw `Out of bounds error: Wanted bin ${bin}, pos ${position}; max is bin ${this.bins}, pos ${this.positions}`;
 	}
+
+	clone() {
+		return new QlwData(this.data.archive, this.data.uri);
+	}
 }

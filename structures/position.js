@@ -21,19 +21,37 @@ module.exports = class Position {
 			data: undefined,
 			initId: undefined,
 			resolves: [],
-			onLoad: () => {}
-		}
+			onLoad: () => {},
+			awaitInit: wantedItem => {
+				return new Promise(resolve => {
+					if (this.data[wantedItem])
+						resolve(this.data[wantedItem]);
+					else {
+						this.data.resolves.push(() => resolve(this.data[wantedItem]));
+
+						if (this.data.initId)
+							this.data.archive.expedite(this.data.initId);
+						else
+							this.loadFiles();
+					}
+				});
+			}
+		};
+
+		this.toUpdate = {
+			comment: undefined
+		};
 	}
 
 	async loadFiles() {
 		this.data.initId = `${this.uuid}-init`;
 		const metadata = JSON.parse((await this.data.archive.extract(this.data.uri + '/' + constants.fileStructure.position.METAFILE, this.data.initId)).toString());
 
-		this.data.onLoad(metadata);
+		await this.data.onLoad(metadata);
 	}
 
 	async initialize({rawConditions, conditions, backgrounds}, backgroundLoad) {
-		this.data.onLoad = metadata => {
+		this.data.onLoad = async metadata => {
 			if (this.uuid !== metadata[constants.positionMeta.UUID])
 				console.warn(`Expected ${this.uuid}, got ${metadata[constants.positionMeta.UUID]}`);
 
@@ -49,7 +67,11 @@ module.exports = class Position {
 					permDelete: background.permDelete,
 					cloneTo: background.cloneTo
 				};
-			this.data.comment = metadata[constants.positionMeta.COMMENT];
+			if (this.data.comment === '')
+				this.data.comment = metadata[constants.positionMeta.COMMENT];
+
+			const cond = await (await this.condition).getData();
+			this.data.data = new Map((await Promise.all(this.data.dataFiles.map(async uri => makeData(this.data.archive, uri, cond)))).map(data => [data.name, data]));
 
 			for (const resolve of this.data.resolves)
 				resolve();
@@ -66,74 +88,34 @@ module.exports = class Position {
 	}
 
 	get background() {
-		return new Promise(resolve => {
-			if (this.data.background)
-				resolve(this.data.background);
-			else {
-				this.data.resolves.push(() => resolve(this.data.background));
-
-				if (this.data.initId)
-					this.data.archive.expedite(this.data.initId);
-				else
-					this.loadFiles();
-			}
-		});
+		return this.data.awaitInit('background');
 	}
 
 	get condition() {
-		return new Promise(resolve => {
-			if (this.data.condition)
-				resolve(this.data.condition);
-			else {
-				this.data.resolves.push(() => resolve(this.data.condition));
-
-				if (this.data.initId)
-					this.data.archive.expedite(this.data.initId);
-				else
-					this.loadFiles();
-			}
-		});
+		return this.data.awaitInit('condition');
 	}
 
 	get rawCondition() {
-		return new Promise(resolve => {
-			if (this.data.rawCondition)
-				resolve(this.data.rawCondition);
-			else {
-				this.data.resolves.push(() => resolve(this.data.rawCondition));
-
-				if (this.data.initId)
-					this.data.archive.expedite(this.data.initId);
-				else
-					this.loadFiles();
-			}
-		});
+		return this.data.awaitInit('rawCondition');
 	}
 
 	get state() {
 		return this.data.state;
 	}
 
-	getTypes() {
-		return new Promise(async resolve => {
-			if (this.data.data)
-				resolve(this.data.data);
-			else {
-				const test = await Promise.all(this.data.dataFiles.map(async uri => makeData(this.data.archive, uri, await (await this.condition).getData())));
-				this.data.data = new Map(test.map(data => [data.name, data]));
-				resolve(this.data.data);
-			}
-		});
+	hasType(type) {
+		return this.data.data.has(type);
 	}
 
-	getType(type) {
-		return new Promise(async resolve => {
-			if (this.data.data)
-				resolve(this.data.data.get(type));
-			else {
-				resolve((await this.getTypes()).get(type));
-			}
-		});
+	async getTypes() {
+		return Array.from((await this.data.awaitInit('data')).keys());
+	}
+
+	async getType(type) {
+		if (this.data.data)
+			return this.data.data.get(type).clone();
+		else
+			return (await this.getTypes()).get(type).clone();
 	}
 
 	addType(data) {
@@ -145,26 +127,35 @@ module.exports = class Position {
 	}
 
 	getComment() {
-		return new Promise((resolve, reject) => {
-			if (this.data.comment)
-				resolve(this.data.comment);
-			else {
-				this.data.resolves.push(() => resolve(this.data.comment));
-
-				if (this.data.initId)
-					this.data.archive.expedite(this.data.initId);
-				else
-					this.loadFiles();
-			}
-		});
+		return this.data.awaitInit('comment');
 	}
 
-	setComment(comment) {
-
+	async setComment(comment) {
+		if (comment !== await this.getComment()) {
+			this.toUpdate.comment = comment;
+			await this.update();
+		}
 	}
 
 	async permDelete() {
 		return await Promise.all(await this.data.archive.delete(this.data.uri));
+	}
+
+	async update() {
+		const updatedData = {
+			[constants.positionMeta.UUID]: this.uuid,
+			[constants.positionMeta.BACKGROUNDUUID]: (await this.background).uuid,
+			[constants.positionMeta.CONDITIONUUID]: (await this.condition).uuid,
+			[constants.positionMeta.RAWCONDTIONUUID]: (await this.rawCondition).uuid,
+			[constants.positionMeta.COMMENT]: this.toUpdate.comment ? this.toUpdate.comment : this.data.comment
+		};
+
+		this.toUpdate.comment = undefined;
+
+		await this.data.archive.delete(this.data.uri + '/' + constants.fileStructure.position.METAFILE);
+		await this.data.archive.update(this.data.uri + '/' + constants.fileStructure.position.METAFILE, JSON.stringify(updatedData));
+
+		this.data.comment = updatedData.comment;
 	}
 
 	async cloneTo(sxesGroup) {

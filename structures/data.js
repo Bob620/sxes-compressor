@@ -39,7 +39,20 @@ module.exports = class Data {
 			throw `Out of bounds error: Wanted bin ${bin}, pos ${position}; max is bin ${this.bins}, pos ${this.positions}`;
 	}
 
-	serialize() {
+	async serialize() {
+		let data = [];
 
+		for (let bin = 0; bin < this.bins; bin++) {
+			data[bin] = [];
+
+			for (let pos = 0; pos < this.positions; pos++)
+				data[bin][pos] = await this.get(bin, pos);
+		}
+
+		return data;
+	}
+
+	clone() {
+		return new Data(this.data.archive, this.data.uri, Buffer.from([]), this.data.offset, this.bins, this.positions);
 	}
 };

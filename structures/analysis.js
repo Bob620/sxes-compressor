@@ -1,36 +1,88 @@
+const constants = require('../constants.json');
+
 module.exports = class Analysis {
-	constructor(archive, uuid, name='', comment='', positions=new Map()) {
+	constructor(sxesGroup, data, positions = new Map()) {
 		this.data = {
-			uuid,
-			name,
-			comment,
+			uuid: data.uuid,
+			name: data.name,
+			comment: data.comment,
+			operator: data.operator,
+			instrument: data.instrument,
+			acquisitionDate: data.acquisitionDate,
 			positions,
-			archive
-		}
+			sxesGroup
+		};
+
+		this.toUpdate = {
+			comment: undefined,
+			operator: undefined,
+			name: undefined,
+			acquisitionDate: undefined,
+			instrument: undefined
+		};
 	}
 
 	get uuid() {
 		return this.data.uuid;
 	}
 
-	getName() {
+	get operator() {
+		return this.data.operator;
+	}
+
+	set operator(operator) {
+		if (operator !== this.data.operator) {
+			this.toUpdate.operator = operator;
+			this.update();
+		}
+	}
+
+	get instrument() {
 		return this.data.name;
 	}
 
-	setName(name) {
-
+	set instrument(instrument) {
+		if (instrument !== this.data.instrument) {
+			this.toUpdate.instrument = instrument;
+			this.update();
+		}
 	}
 
-	getComment() {
+	get acquisitionDate() {
+		return this.data.name;
+	}
+
+	set acquisitionDate(date) {
+		if (date !== this.data.acquisitionDate) {
+			this.toUpdate.acquisitionDate = date;
+			this.update();
+		}
+	}
+
+	get name() {
+		return this.data.name;
+	}
+
+	set name(name) {
+		if (name !== this.data.name) {
+			this.toUpdate.name = name;
+			this.update();
+		}
+	}
+
+	get comment() {
 		return this.data.comment;
 	}
 
-	setComment(comment) {
-
+	set comment(comment) {
+		if (comment !== this.data.comment) {
+			this.toUpdate.comment = comment;
+			this.update();
+		}
 	}
 
 	getPositions() {
-		return this.data.positions
+		return this.data.positions;
 	}
 
 	getPosition(uuid) {
@@ -38,10 +90,47 @@ module.exports = class Analysis {
 	}
 
 	addPosition(position) {
-
+		this.data.positions.set(position.uuid, position);
+		this.update();
 	}
 
 	deletePosition(uuid) {
+		this.data.positions.delete(uuid);
+		this.update();
+	}
 
+	serialize() {
+		return {
+			acquisitionDate: this.acquisitionDate,
+			comment: this.comment,
+			name: this.name,
+			operator: this.operator,
+			instrument: this.instrument,
+			uuid: this.uuid,
+			positionUuids: Array.from(this.getPositions().keys())
+		};
+	}
+
+	update() {
+		if (this.toUpdate.comment)
+			this.data.comment = this.toUpdate.comment;
+		if (this.toUpdate.operator)
+			this.data.operator = this.toUpdate.operator;
+		if (this.toUpdate.name)
+			this.data.name = this.toUpdate.name;
+		if (this.toUpdate.acquisitionDate)
+			this.data.acquisitionDate = this.toUpdate.acquisitionDate;
+		if (this.toUpdate.instrument)
+			this.data.instrument = this.toUpdate.instrument;
+
+		this.toUpdate = {
+			comment: undefined,
+			operator: undefined,
+			name: undefined,
+			acquisitionDate: undefined,
+			instrument: undefined
+		};
+
+		this.data.sxesGroup.updateAnalysis(this.uuid);
 	}
 };
