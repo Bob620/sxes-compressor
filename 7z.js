@@ -2,7 +2,7 @@ const { spawn } = require('child_process');
 const path = require('path');
 
 const constants = require('./constants.json');
-const generateUuid = require('../xes_converter/util/generateuuid');
+const generateUuid = require('./generateuuid.js');
 
 const { path7za } = require('7zip-bin');
 
