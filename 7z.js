@@ -55,8 +55,11 @@ module.exports = class SevenZip {
 		this.data.manualQueue.add(processId);
 	}
 
-	queue(func, processId=generateUuid.v4()) {
+	queue(func, processId) {
 		return new Promise(resolve => {
+			if (processId === false)
+				processId = generateUuid.v4();
+
 			this.data.queueFuncs.set(processId, async () => {
 				resolve(await func());
 				this.data.next();
@@ -170,7 +173,7 @@ module.exports = class SevenZip {
 					this.data.next();
 				});
 			} else
-				resolve(this.queue(this.updateStream.bind(this, fileName, inputStream), processId));
+				resolve(await this.queue(this.updateStream.bind(this, fileName, inputStream), processId));
 		});
 	}
 
@@ -185,7 +188,7 @@ module.exports = class SevenZip {
 					this.data.next();
 				});
 			} else
-				resolve(this.queue(this.addFrom.bind(this, uri, deleteOnceDone), processId));
+				resolve(await this.queue(this.addFrom.bind(this, uri, deleteOnceDone), processId));
 		});
 	}
 
@@ -200,7 +203,7 @@ module.exports = class SevenZip {
 					this.data.next();
 				});
 			} else
-				resolve(this.queue(this.delete.bind(this, match), processId));
+				resolve(await this.queue(this.delete.bind(this, match), processId));
 		});
 	}
 
