@@ -1,5 +1,5 @@
 module.exports = class Data {
-	constructor(archive, uri, rawData, offset=0, bins=0, positions=0) {
+	constructor(archive, uri, rawData, offset = 0, bins = 0, positions = 0) {
 		this.data = {
 			uri,
 			archive,
@@ -27,14 +27,22 @@ module.exports = class Data {
 		return this.data.positions;
 	}
 
-	async get(bin=0, position=0) {
-		if (bin < this.bins && position <= this.positions)
-			if (this.data.rawData.length !== 0)
-				return this.rawData.readUInt32LE(this.data.offset + (4 * (bin * this.positions + position)));
-			else {
-				this.data.rawData = await this.data.archive.extract(this.data.uri);
-				return this.rawData.readUInt32LE(this.data.offset + (4 * (bin * this.positions + position)));
-			}
+	async get(bin = 0, position = -1) {
+		if (this.data.rawData.length === 0)
+			this.data.rawData = await this.data.archive.extract(this.data.uri);
+
+		if (bin >= 0 && bin < this.bins)
+			if (position <= this.positions)
+				if (position >= 0)
+					return this.rawData.readUInt32LE(this.data.offset + (4 * (bin * this.positions + position)));
+				else {
+					let data = [];
+					for (let i = 0; i <= this.positions; i++)
+						data.push(this.rawData.readUInt32LE(this.data.offset + (4 * (bin * this.positions + i))));
+					return data;
+				}
+			else
+				throw `Out of bounds error: Wanted bin ${bin}, pos ${position}; max is bin ${this.bins}, pos ${this.positions}`;
 		else
 			throw `Out of bounds error: Wanted bin ${bin}, pos ${position}; max is bin ${this.bins}, pos ${this.positions}`;
 	}
@@ -50,6 +58,10 @@ module.exports = class Data {
 		}
 
 		return data;
+	}
+
+	toArray() {
+		return this.serialize();
 	}
 
 	clone() {
