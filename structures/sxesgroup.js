@@ -3,6 +3,7 @@ const path = require('path');
 const constants = require('../constants.json');
 
 const Position = require('./position.js');
+const Image = require('./image.js');
 const Analysis = require('./analysis.js');
 const Project = require('./project.js');
 const Background = require('./background.js');
@@ -23,6 +24,7 @@ module.exports = class SxesGroup {
 			projects: new Map(),
 			analyses: new Map(),
 			positions: new Map(),
+			images: new Map(),
 			backgrounds: new Map(),
 			conditions: new Map(),
 			rawConditions: new Map()
@@ -31,6 +33,7 @@ module.exports = class SxesGroup {
 		this.toUpdate = {
 			metadata: false,
 			positions: [],
+			images: [],
 			backgrounds: [],
 			conditions: [],
 			rawConditions: []
@@ -49,17 +52,16 @@ module.exports = class SxesGroup {
 			const [dir, file, subfile=''] = path.split('/');
 			switch (dir) {
 				case constants.fileStructure.position.ROOT:
-					let pos = data.positions.get(file);
-					if (pos === undefined) {
-						pos = {
-							root: `${dir}/${file}`,
-							data: []
-						};
-						data.positions.set(file, pos);
+					if (subfile === constants.fileStructure.superData.METAFILE) {
+						const pos = new Position(this, path);
+						data.positions.set(pos.uuid, pos);
 					}
-
-					if (subfile.endsWith(constants.fileStructure.position.DATAEXTENTION))
-						pos.data.push(`${pos.root}/${subfile}`);
+					break;
+				case constants.fileStructure.image.ROOT:
+					if (subfile === constants.fileStructure.superData.METAFILE) {
+						const image = new Image(this, path);
+						data.images.set(image.uuid, image);
+					}
 					break;
 				case constants.fileStructure.background.ROOT:
 					const background = new Background(this.archive, path);
@@ -81,27 +83,30 @@ module.exports = class SxesGroup {
 			conditions: new Map(),
 			rawConditions: new Map(),
 			positions: new Map(),
+			images: new Map()
 		});
 
 		this.data.rawConditions = allItems.rawConditions;
 		this.data.conditions = allItems.conditions;
 		this.data.backgrounds = allItems.backgrounds;
 
-		this.data.positions = new Map(Array.from(allItems.positions.values()).map(({root, data}) => new Position(this.archive, root, data)).map(pos => {
-			pos.initialize({
-				rawConditions: this.getRawConditions(),
-				conditions: this.getConditions(),
-				backgrounds: this.getBackgrounds()
-			}, backgroundLoad);
+		this.data.positions = new Map(Array.from(allItems.positions.values()).map(pos => {
+			pos.initialize(backgroundLoad);
 
 			return [pos.uuid, pos];
 		}));
 
+		this.data.images = new Map(Array.from(allItems.images.values()).map(image => {
+			image.initialize(backgroundLoad);
+
+			return [image.uuid, image];
+		}));
+
 		this.data.analyses = new Map(this.data.metadata[constants.metaMeta.ANALYSES].map(
-			data => new Analysis(this.archive, data, new Map(data.positionUuids.map(uuid => [uuid, this.getPosition(uuid)])))
+			data => new Analysis(this, data)
 		).map(analysis => [analysis.uuid, analysis]));
 		this.data.projects = new Map(this.data.metadata[constants.metaMeta.PROJECTS].map(
-			({uuid, name, comment, analysisUuids}) => new Project(this.archive, uuid, name, comment, new Map(analysisUuids.map(uuid => [uuid, this.getAnalysis(uuid)])))
+			({uuid, name, comment, analysisUuids}) => new Project(this, uuid, name, comment, analysisUuids)
 		).map(project => [project.uuid, project]));
 
 		this.data.metadata.analyses = [];
@@ -124,7 +129,7 @@ module.exports = class SxesGroup {
 		}
 
 		// Save the components of the group
-		await Promise.all(['positions', 'backgrounds', 'conditions', 'rawConditions'].map(async type => {
+		await Promise.all(['images', 'positions', 'backgrounds', 'conditions', 'rawConditions'].map(async type => {
 			let failed = await Promise.all(this.toUpdate[type].filter(async uuid => !!(await this.getPosition(uuid).save())));
 			let toUpdate = new Set(this.toUpdate.positions);
 
@@ -185,6 +190,11 @@ module.exports = class SxesGroup {
 		await this.save();
 	}
 
+	async updateAnalysis(uuid) {
+		this.toUpdate.metadata = true;
+		await this.save();
+	}
+
 	getPositions() {
 		return this.data.positions;
 	}
@@ -203,6 +213,26 @@ module.exports = class SxesGroup {
 		const position = this.getPosition(uuid);
 		this.data.positions.delete(uuid);
 		await position.permDelete();
+	}
+
+	getImages() {
+		return this.data.images;
+	}
+
+	getImage(uuid) {
+		return this.data.images.get(uuid);
+	}
+
+	async addImage(image) {
+		image = await image.cloneTo(this.archive);
+		this.data.images.set(image.uuid, image);
+		return image;
+	}
+
+	async deleteImage(uuid) {
+		const image = this.getPosition(uuid);
+		this.data.images.delete(uuid);
+		await image.permDelete();
 	}
 
 	getBackgrounds() {

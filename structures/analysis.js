@@ -1,7 +1,7 @@
 const constants = require('../constants.json');
 
 module.exports = class Analysis {
-	constructor(sxesGroup, data, positions = new Map()) {
+	constructor(sxesGroup, data) {
 		this.data = {
 			uuid: data.uuid,
 			name: data.name,
@@ -9,7 +9,8 @@ module.exports = class Analysis {
 			operator: data.operator,
 			instrument: data.instrument,
 			acquisitionDate: data.acquisitionDate,
-			positions,
+			positions: new Map(data.positionUuids.map(uuid => [uuid, sxesGroup.getPosition(uuid)])),
+			images: new Map(data.imageUuids.map(uuid => [uuid, sxesGroup.getImage(uuid)])),
 			sxesGroup
 		};
 
@@ -99,6 +100,24 @@ module.exports = class Analysis {
 		this.update();
 	}
 
+	getImages() {
+		return this.data.images;
+	}
+
+	getImage(uuid) {
+		return this.data.images.get(uuid);
+	}
+
+	addImage(image) {
+		this.data.images.set(image.uuid, image);
+		this.update();
+	}
+
+	deleteImage(uuid) {
+		this.data.images.delete(uuid);
+		this.update();
+	}
+
 	serialize() {
 		return {
 			acquisitionDate: this.acquisitionDate,
@@ -107,11 +126,12 @@ module.exports = class Analysis {
 			operator: this.operator,
 			instrument: this.instrument,
 			uuid: this.uuid,
-			positionUuids: Array.from(this.getPositions().keys())
+			positionUuids: Array.from(this.getPositions().keys()),
+			imageUuids: Array.from(this.getImages().keys())
 		};
 	}
 
-	update() {
+	async update() {
 		if (this.toUpdate.comment)
 			this.data.comment = this.toUpdate.comment;
 		if (this.toUpdate.operator)
@@ -131,6 +151,6 @@ module.exports = class Analysis {
 			instrument: undefined
 		};
 
-		this.data.sxesGroup.updateAnalysis(this.uuid);
+		await this.data.sxesGroup.updateAnalysis(this.uuid);
 	}
 };

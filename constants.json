@@ -13,35 +13,46 @@
     "BACKGROUNDINLET": "backgrounds/*",
     "CONDITIONINLET": "conditions/*",
     "RAWCONDITIONINLET": "rawConditions/*",
+    "superData": {
+      "METAFILE": "info.json"
+    },
     "position": {
       "ROOT": "data",
-      "METAFILE": "info.json",
       "STATE": "state.json",
       "DATA": "*.data",
       "DATAEXTENTION": "data"
     },
     "background": {
-      "ROOT": "backgrounds",
-      "METAFILE": "info.json",
-      "DATA": "*.data"
+      "ROOT": "backgrounds"
     },
     "condition": {
       "ROOT": "conditions"
     },
     "rawCondition": {
       "ROOT": "rawConditions"
+    },
+    "image": {
+      "ROOT": "images",
+      "IMAGENAME": "image"
     }
   },
   "metaMeta": {
     "ANALYSES": "analyses",
     "PROJECTS": "projects"
   },
+  "superDataMeta": {
+    "UUID": "uuid",
+    "COMMENT": "comment"
+  },
   "positionMeta": {
     "RAWCONDTIONUUID": "rawCondtionUuid",
     "CONDITIONUUID": "conditionUuid",
-    "BACKGROUNDUUID": "backgroundUuid",
-    "UUID": "uuid",
-    "COMMENT": "comment"
+    "BACKGROUNDUUID": "backgroundUuid"
+  },
+  "imageMeta": {
+    "RAWCONDTIONUUID": "rawCondtionUuid",
+    "CONDITIONUUID": "conditionUuid",
+    "IMAGETYPE": "imageType"
   },
   "background": {
     "DATAOFFSET": 8

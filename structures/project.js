@@ -1,11 +1,11 @@
 module.exports = class Project {
-	constructor(archive, uuid, name='', comment='', analyses=new Map()) {
+	constructor(sxesGroup, uuid, name='', comment='', analysisUuids = []) {
 		this.data = {
 			uuid,
 			name,
 			comment,
-			analyses,
-			archive
+			analyses: new Map(analysisUuids.map(uuid => [uuid, sxesGroup.getAnalysis(uuid)])),
+			sxesGroup
 		}
 	}
 
