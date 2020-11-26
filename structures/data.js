@@ -1,5 +1,5 @@
 module.exports = class Data {
-	constructor(archive, uri, rawData, offset = 0, bins = 0, positions = 0) {
+	constructor(archive, uri, rawData = Buffer.from([]), offset = 0, bins = 0, positions = 0) {
 		this.data = {
 			uri,
 			archive,
@@ -8,7 +8,7 @@ module.exports = class Data {
 			rawData,
 			bins,
 			positions
-		}
+		};
 	}
 
 	get name() {

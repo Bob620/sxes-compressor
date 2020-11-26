@@ -4,26 +4,44 @@ const generateUuid = require('../generateuuid.js');
 
 // Wrapper class for things that require extra data like positions or images (both metadata and conditions but also
 //   larger data like raw and images
+// `position` is default superType for testing purposes
 module.exports = class SuperData {
-	constructor(sxesGroup, uri) {
+	constructor(sxesGroup, uri, typeRoot = constants.fileStructure.position.ROOT) {
 		const uriSplit = uri.split('/');
 		uri = uriSplit.slice(0, 2).join('/');
 		this.data = {
+			typeRoot,
 			uuid: uriSplit[1],
 			uri,
 			sxesGroup,
 			superData: {},
-			comment: '',
+			expectedData: {
+				comment: ''
+			},
 			initId: undefined,
 			resolves: [],
-			onLoad: () => {
+			onLoad: async metadata => {
+				if (this.uuid !== metadata[constants.superDataMeta.UUID])
+					console.warn(`Expected ${this.uuid}, got ${metadata[constants.superDataMeta.UUID]}`);
+
+				const dataFiles = (await this.data.sxesGroup.archive.list(`${this.data.uri}/*`)).filter(({name: path}) => !path.endsWith(constants.fileStructure.superData.METAFILE));
+
+				await this.childInitialize(metadata, dataFiles);
+
+				if (this.data.expectedData.comment === '')
+					this.data.expectedData.comment = metadata[constants.superDataMeta.COMMENT];
+
+				for (const resolve of this.data.resolves)
+					resolve();
+
+				this.data.resolves = [];
 			},
-			awaitInit: wantedItem => {
+			awaitInit: (dataType = 'superData', wantedItem) => {
 				return new Promise(resolve => {
-					if (this.data.superData[wantedItem])
-						resolve(this.data.superData[wantedItem]);
+					if (this.data[dataType][wantedItem])
+						resolve(this.data[dataType][wantedItem]);
 					else {
-						this.data.resolves.push(() => resolve(this.data.superData[wantedItem]));
+						this.data.resolves.push(() => resolve(this.data[dataType][wantedItem]));
 
 						if (this.data.initId)
 							this.data.sxesGroup.archive.expedite(this.data.initId);
@@ -39,6 +57,10 @@ module.exports = class SuperData {
 		};
 	}
 
+	awaitSuperData(wantedItem) {
+		return this.data.awaitInit('superData', wantedItem);
+	}
+
 	async loadFiles() {
 		if (this.data.initId)
 			this.data.sxesGroup.archive.expedite(this.data.initId);
@@ -51,27 +73,8 @@ module.exports = class SuperData {
 		}
 	}
 
-	async initialize(backgroundLoad) {
-		this.data.onLoad = async metadata => {
-			if (this.uuid !== metadata[constants.superDataMeta.UUID])
-				console.warn(`Expected ${this.uuid}, got ${metadata[constants.superDataMeta.UUID]}`);
-
-			const dataFiles = await this.data.sxesGroup.archive.list(`${this.data.uri}/*`).filter(({name: path}) => !path.endsWith(constants.fileStructure.superData.METAFILE));
-
-			await this.childInitialize(metadata, dataFiles);
-
-			if (this.data.comment === '')
-				this.data.comment = metadata[constants.superDataMeta.COMMENT];
-
-			for (const resolve of this.data.resolves)
-				resolve();
-
-			this.data.resolves = [];
-		};
-
-		if (backgroundLoad)
-			await this.loadFiles();
-
+	async initialize() {
+		await this.loadFiles();
 		return this;
 	}
 
@@ -83,15 +86,11 @@ module.exports = class SuperData {
 	}
 
 	get comment() {
-		return this.data.awaitInit('comment');
-	}
-
-	getComment() {
-		return this.data.awaitInit('comment');
+		return this.data.awaitInit('expectedData', 'comment');
 	}
 
 	async setComment(comment) {
-		if (comment !== await this.getComment()) {
+		if (comment !== await this.comment) {
 			this.toUpdate.comment = comment;
 			await this.update();
 		}
@@ -104,7 +103,7 @@ module.exports = class SuperData {
 	async update() {
 		let updatedData = {
 			[constants.superDataMeta.UUID]: this.uuid,
-			[constants.superDataMeta.COMMENT]: this.toUpdate.comment ? this.toUpdate.comment : this.data.comment
+			[constants.superDataMeta.COMMENT]: this.toUpdate.comment ? this.toUpdate.comment : this.data.expectedData.comment
 		};
 
 		this.toUpdate.comment = undefined;
@@ -114,7 +113,7 @@ module.exports = class SuperData {
 		await this.data.sxesGroup.archive.delete(metafileUri);
 		await this.data.sxesGroup.archive.update(metafileUri, JSON.stringify(updatedData));
 
-		this.data.comment = updatedData.comment;
+		this.data.expectedData.comment = updatedData.comment;
 	}
 
 	async childUpdate(updatedData) {
@@ -124,17 +123,17 @@ module.exports = class SuperData {
 	async cloneTo(sxesGroup) {
 		const uuid = generateUuid.v4();
 
-		await Promise.all(await this.data.sxesGroup.archive.list(this.data.uri).filter(({name}) => name !== constants.fileStructure.superData.METAFILE).map(async ({name}) => {
-			await sxesGroup.archive.updateStream(`${constants.fileStructure.position.ROOT}/${uuid}/${name.split('/').pop()}`, this.data.sxesGroup.archive.extractStream(name));
+		await Promise.all((await this.data.sxesGroup.archive.list(this.data.uri)).filter(({name}) => name !== constants.fileStructure.superData.METAFILE).map(async ({name}) => {
+			await sxesGroup.archive.updateStream(`${this.data.typeRoot}/${uuid}/${name.split('/').pop()}`, this.data.sxesGroup.archive.extractStream(name));
 		}));
 
 		let newMeta = {
 			[constants.superDataMeta.UUID]: uuid,
-			[constants.superDataMeta.COMMENT]: await this.getComment()
+			[constants.superDataMeta.COMMENT]: await this.comment
 		};
 		newMeta = await this.childCloneToMetadata(newMeta);
 
-		const metafileUri = `${constants.fileStructure.image.ROOT}/${uuid}/${constants.fileStructure.superData.METAFILE}`;
+		const metafileUri = `${this.data.typeRoot}/${uuid}/${constants.fileStructure.superData.METAFILE}`;
 		await sxesGroup.archive.update(metafileUri, JSON.stringify(newMeta));
 
 		return await this.childCloneToReturn(sxesGroup, metafileUri);
@@ -145,6 +144,24 @@ module.exports = class SuperData {
 	}
 
 	async childCloneToReturn(sxesGroup, metafileUri) {
-		return await (new SuperData(sxesGroup.archive, metafileUri).initialize({}));
+		return new SuperData(sxesGroup, metafileUri);
+	}
+
+	async serialize() {
+		const [comment, childData] = await Promise.all([this.comment, this.childSerialize()]);
+
+		let data = {
+			uuid: this.uuid,
+			comment
+		};
+
+		for (const [key, item] of (Object.entries(childData)))
+			data[key] = item;
+
+		return data;
+	}
+
+	async childSerialize() {
+		return {};
 	}
 };

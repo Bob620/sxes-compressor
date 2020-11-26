@@ -37,20 +37,20 @@ module.exports = class SxesGroup {
 			backgrounds: [],
 			conditions: [],
 			rawConditions: []
-		}
+		};
 
 	}
 
-	async initialize(backgroundLoad=false) {
+	async initialize(backgroundLoad = false) {
 		const rawMeta = await this.archive.extract(constants.fileStructure.METADATA);
 		if (rawMeta.length !== 0)
 			this.data.metadata = JSON.parse(rawMeta.toString());
 		else
-			throw "No metadata file found within the archive, are you sure this is a sxesgroup file?";
+			throw 'No metadata file found within the archive, are you sure this is a sxesgroup file?';
 
 		const allItems = (await this.archive.list('*/*')).reduce((data, {name: path}) => {
-			const [dir, file, subfile=''] = path.split('/');
-			switch (dir) {
+			const [dir, file, subfile = ''] = path.split('/');
+			switch(dir) {
 				case constants.fileStructure.position.ROOT:
 					if (subfile === constants.fileStructure.superData.METAFILE) {
 						const pos = new Position(this, path);
@@ -86,22 +86,14 @@ module.exports = class SxesGroup {
 			images: new Map()
 		});
 
+		// Ready to be accessed
 		this.data.rawConditions = allItems.rawConditions;
 		this.data.conditions = allItems.conditions;
 		this.data.backgrounds = allItems.backgrounds;
+		this.data.positions = allItems.positions;
+		this.data.images = allItems.images;
 
-		this.data.positions = new Map(Array.from(allItems.positions.values()).map(pos => {
-			pos.initialize(backgroundLoad);
-
-			return [pos.uuid, pos];
-		}));
-
-		this.data.images = new Map(Array.from(allItems.images.values()).map(image => {
-			image.initialize(backgroundLoad);
-
-			return [image.uuid, image];
-		}));
-
+		// Initialize from json
 		this.data.analyses = new Map(this.data.metadata[constants.metaMeta.ANALYSES].map(
 			data => new Analysis(this, data)
 		).map(analysis => [analysis.uuid, analysis]));
@@ -120,8 +112,8 @@ module.exports = class SxesGroup {
 		if (this.toUpdate.metadata) {
 			this.toUpdate.metadata = false;
 
-			this.data.metadata.analyses = Array.from(this.getAnalyses().values());
-			this.data.metadata.projects = Array.from(this.getProjects().values());
+			this.data.metadata.analyses = Array.from(this.analyses.values());
+			this.data.metadata.projects = Array.from(this.projects.values());
 
 			await this.archive.update(constants.fileStructure.METADATA, JSON.stringify(this.data.metadata));
 			this.data.metadata.analyses = [];
@@ -148,7 +140,7 @@ module.exports = class SxesGroup {
 		return this.data.uri;
 	}
 
-	getProjects() {
+	get projects() {
 		return this.data.projects;
 	}
 
@@ -169,7 +161,7 @@ module.exports = class SxesGroup {
 		await this.save();
 	}
 
-	getAnalyses() {
+	get analyses() {
 		return this.data.analyses;
 	}
 
@@ -195,7 +187,7 @@ module.exports = class SxesGroup {
 		await this.save();
 	}
 
-	getPositions() {
+	get positions() {
 		return this.data.positions;
 	}
 
@@ -215,7 +207,7 @@ module.exports = class SxesGroup {
 		await position.permDelete();
 	}
 
-	getImages() {
+	get images() {
 		return this.data.images;
 	}
 
@@ -235,7 +227,7 @@ module.exports = class SxesGroup {
 		await image.permDelete();
 	}
 
-	getBackgrounds() {
+	get backgrounds() {
 		return this.data.backgrounds;
 	}
 
@@ -255,7 +247,7 @@ module.exports = class SxesGroup {
 		await background.permDelete();
 	}
 
-	getConditions() {
+	get condition() {
 		return this.data.conditions;
 	}
 
@@ -275,7 +267,7 @@ module.exports = class SxesGroup {
 		await condition.permDelete();
 	}
 
-	getRawConditions() {
+	get rawConditions() {
 		return this.data.rawConditions;
 	}
 

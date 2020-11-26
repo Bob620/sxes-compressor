@@ -33,7 +33,8 @@
     },
     "image": {
       "ROOT": "images",
-      "IMAGENAME": "image"
+      "IMAGENAME": "image",
+      "STATE": "state.json"
     }
   },
   "metaMeta": {
@@ -45,12 +46,13 @@
     "COMMENT": "comment"
   },
   "positionMeta": {
-    "RAWCONDTIONUUID": "rawCondtionUuid",
+    "RAWCONDTIONUUID": "rawConditionUuid",
     "CONDITIONUUID": "conditionUuid",
-    "BACKGROUNDUUID": "backgroundUuid"
+    "BACKGROUNDUUID": "backgroundUuid",
+    "OPERATOR": "operator"
   },
   "imageMeta": {
-    "RAWCONDTIONUUID": "rawCondtionUuid",
+    "RAWCONDTIONUUID": "rawConditionUuid",
     "CONDITIONUUID": "conditionUuid",
     "IMAGETYPE": "imageType"
   },

@@ -13,7 +13,7 @@ module.exports = class Project {
 		return this.data.uuid;
 	}
 
-	getName() {
+	get name() {
 		return this.data.name;
 	}
 
@@ -21,7 +21,7 @@ module.exports = class Project {
 
 	}
 
-	getComment() {
+	get comment() {
 		return this.data.comment;
 	}
 
@@ -29,7 +29,7 @@ module.exports = class Project {
 
 	}
 
-	getAnalyses() {
+	get analyses() {
 		return this.data.analyses;
 	}
 
@@ -43,5 +43,14 @@ module.exports = class Project {
 
 	deleteAnalysis(uuid) {
 
+	}
+
+	serialize() {
+		return {
+			uuid: this.uuid,
+			name: this.name,
+			comment: this.comment,
+			analyses: Array.from(this.analyses.keys())
+		};
 	}
 };

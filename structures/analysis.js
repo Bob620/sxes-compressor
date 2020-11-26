@@ -2,6 +2,9 @@ const constants = require('../constants.json');
 
 module.exports = class Analysis {
 	constructor(sxesGroup, data) {
+		if (data.imageUuids === undefined)
+			data.imageUuids = [];
+
 		this.data = {
 			uuid: data.uuid,
 			name: data.name,
@@ -39,7 +42,7 @@ module.exports = class Analysis {
 	}
 
 	get instrument() {
-		return this.data.name;
+		return this.data.instrument;
 	}
 
 	set instrument(instrument) {
@@ -50,7 +53,7 @@ module.exports = class Analysis {
 	}
 
 	get acquisitionDate() {
-		return this.data.name;
+		return this.data.acquisitionDate;
 	}
 
 	set acquisitionDate(date) {
@@ -82,7 +85,7 @@ module.exports = class Analysis {
 		}
 	}
 
-	getPositions() {
+	get positions() {
 		return this.data.positions;
 	}
 
@@ -90,17 +93,17 @@ module.exports = class Analysis {
 		return this.data.positions.get(uuid);
 	}
 
-	addPosition(position) {
+	async addPosition(position) {
 		this.data.positions.set(position.uuid, position);
-		this.update();
+		await this.update();
 	}
 
-	deletePosition(uuid) {
+	async deletePosition(uuid) {
 		this.data.positions.delete(uuid);
-		this.update();
+		await this.update();
 	}
 
-	getImages() {
+	get images() {
 		return this.data.images;
 	}
 
@@ -108,14 +111,14 @@ module.exports = class Analysis {
 		return this.data.images.get(uuid);
 	}
 
-	addImage(image) {
+	async addImage(image) {
 		this.data.images.set(image.uuid, image);
-		this.update();
+		await this.update();
 	}
 
-	deleteImage(uuid) {
+	async deleteImage(uuid) {
 		this.data.images.delete(uuid);
-		this.update();
+		await this.update();
 	}
 
 	serialize() {
@@ -126,8 +129,8 @@ module.exports = class Analysis {
 			operator: this.operator,
 			instrument: this.instrument,
 			uuid: this.uuid,
-			positionUuids: Array.from(this.getPositions().keys()),
-			imageUuids: Array.from(this.getImages().keys())
+			positionUuids: Array.from(this.positions.keys()),
+			imageUuids: Array.from(this.images.keys())
 		};
 	}
 

@@ -5,19 +5,22 @@ const State = require('./state.js');
 const makeData = require('../makedata.js');
 
 module.exports = class Position extends SuperData {
-	constructor(sxesGroup, uri, dataFiles=[]) {
-		super(sxesGroup, uri);
+	constructor(sxesGroup, uri, dataFiles = []) {
+		super(sxesGroup, uri, constants.fileStructure.position.ROOT);
 
 		this.data.superData = {
 			background: undefined,
 			condition: undefined,
 			rawCondition: undefined,
+			operator: undefined,
 			dataFiles,
-			state: new State(sxesGroup.archive, `${uri}/${constants.fileStructure.position.STATE}`),
+			state: new State(sxesGroup.archive, `${this.data.uri}/${constants.fileStructure.position.STATE}`)
 		};
 	}
 
 	async childInitialize(metadata, dataFiles) {
+		this.data.superData.operator = metadata[constants.positionMeta.OPERATOR];
+
 		this.data.superData.rawCondition = this.data.sxesGroup.getRawCondition(metadata[constants.positionMeta.RAWCONDTIONUUID]);
 		this.data.superData.condition = this.data.sxesGroup.getCondition(metadata[constants.positionMeta.CONDITIONUUID]);
 
@@ -30,46 +33,61 @@ module.exports = class Position extends SuperData {
 				permDelete: background.permDelete,
 				cloneTo: background.cloneTo
 			};
+		else
+			this.data.superData.background = {
+				uuid: '',
+				hash: '',
+				getData: () => {
+				},
+				permDelete: () => {
+				},
+				cloneTo: () => {
+				}
+			};
 
 		const cond = await this.data.superData.condition.getData();
 		this.data.superData.data = new Map(
-			(await Promise.all(
-				dataFiles
-					.filter(({name: path}) => path.endsWith(constants.fileStructure.position.DATAEXTENTION))
-					.map(async uri => makeData(this.data.sxesGroup.archive, uri, cond))
-			)).map(data => [data.name, data])
+			dataFiles
+				.filter(({name: path}) => path.endsWith(constants.fileStructure.position.DATAEXTENTION))
+				.map(uri => makeData(this.data.sxesGroup.archive, uri.name, cond))
+				.map(data => [data.name, data])
 		);
 	}
 
 	get background() {
-		return this.data.awaitInit('background');
+		return this.awaitSuperData('background');
 	}
 
 	get condition() {
-		return this.data.awaitInit('condition');
+		return this.awaitSuperData('condition');
 	}
 
 	get rawCondition() {
-		return this.data.awaitInit('rawCondition');
+		return this.awaitSuperData('rawCondition');
 	}
 
 	get state() {
-		return this.data.state;
+		return this.data.superData.state;
 	}
 
-	hasType(type) {
+	get operator() {
+		return this.awaitSuperData('operator');
+	}
+
+	async hasType(type) {
+		if (this.data.superData.data === undefined)
+			await this.getTypes();
 		return this.data.superData.data.has(type);
 	}
 
 	async getTypes() {
-		return Array.from((await this.data.awaitInit('data')).keys());
+		return Array.from((await this.awaitSuperData('data')).keys());
 	}
 
 	async getType(type) {
-		if (this.data.superData.data)
-			return this.data.superData.data.get(type).clone();
-		else
-			return (await this.getTypes()).get(type).clone();
+		if (this.data.superData.data === undefined)
+			await this.getTypes();
+		return this.data.superData.data.get(type).clone();
 	}
 
 	addType(data) {
@@ -93,10 +111,16 @@ module.exports = class Position extends SuperData {
 		await sxesGroup.addCondition(await this.condition);
 		await sxesGroup.addRawCondition(await this.rawCondition);
 
-		return await (new Position(sxesGroup, metafileUri)).initialize({
-			rawConditions: sxesGroup.getRawConditions(),
-			conditions: sxesGroup.getConditions(),
-			backgrounds: sxesGroup.getBackgrounds()
-		});
+		return new Position(sxesGroup, metafileUri);
+	}
+
+	async childSerialize() {
+		return {
+			operator: await this.operator,
+			background: (await this.background).uuid,
+			condition: (await this.condition).uuid,
+			rawCondition: (await this.rawCondition).uuid,
+			types: (await this.getTypes())
+		};
 	}
 };

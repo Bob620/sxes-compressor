@@ -5,7 +5,9 @@ const Data = require('./structures/data.js');
 module.exports = (archive, uri, condition) => {
 	switch (uri.split('/').pop().split('.')[0]) {
 		default:
-			return new Data(archive, uri, 0, condition.ccd.bins.x, condition.ccd.bins.y);
+			if (condition.ccd)
+				return new Data(archive, uri, undefined, 0, condition.ccd.bins.x, condition.ccd.bins.y);
+			return new Data(archive, uri, undefined, 0, 1, 2048);
 		case 'xes':
 			return new XesData(archive, uri, condition);
 		case 'qlw':

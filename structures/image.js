@@ -1,15 +1,17 @@
 const constants = require('../constants.json');
 
 const SuperData = require('./superdata.js');
+const State = require('./state.js');
 
 module.exports = class Image extends SuperData {
 	constructor(sxesGroup, uri) {
-		super(sxesGroup, uri);
+		super(sxesGroup, uri, constants.fileStructure.image.ROOT);
 
 		this.data.superData = {
 			condition: undefined,
 			rawCondition: undefined,
-			imageType: ''
+			imageType: '',
+			state: new State(sxesGroup.archive, `${this.data.uri}/${constants.fileStructure.image.STATE}`)
 		};
 	}
 
@@ -22,19 +24,19 @@ module.exports = class Image extends SuperData {
 	}
 
 	get condition() {
-		return this.data.awaitInit('condition');
+		return this.awaitSuperData('condition');
 	}
 
 	get rawCondition() {
-		return this.data.awaitInit('rawCondition');
+		return this.awaitSuperData('rawCondition');
 	}
 
 	get state() {
-		return this.data.state;
+		return this.data.superData.state;
 	}
 
 	get imageType() {
-		return this.data.awaitInit('imageType');
+		return this.awaitSuperData('imageType');
 	}
 
 	async getImage() {
@@ -61,9 +63,6 @@ module.exports = class Image extends SuperData {
 		await sxesGroup.addCondition(await this.condition);
 		await sxesGroup.addRawCondition(await this.rawCondition);
 
-		return await (new Image(sxesGroup.archive, metafileUri)).initialize({
-			rawConditions: sxesGroup.getRawConditions(),
-			conditions: sxesGroup.getConditions()
-		});
+		return new Image(sxesGroup, metafileUri);
 	}
 };
