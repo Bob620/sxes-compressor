@@ -135,6 +135,10 @@ module.exports = class SxesGroup {
 		}));
 	}
 
+	get version() {
+		return this.data.version;
+	}
+
 	get archive() {
 		return this.data.archive;
 	}
