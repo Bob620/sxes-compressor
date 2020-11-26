@@ -19,6 +19,7 @@ module.exports = class SxesGroup {
 
 		this.data = {
 			uri,
+			version: '',
 			archive: new Seven(uri, type),
 			metadata: {},
 			projects: new Map(),
@@ -47,6 +48,8 @@ module.exports = class SxesGroup {
 			this.data.metadata = JSON.parse(rawMeta.toString());
 		else
 			throw 'No metadata file found within the archive, are you sure this is a sxesgroup file?';
+
+		this.data.version = this.data.metadata[constants.metaMeta.VERSION];
 
 		const allItems = (await this.archive.list('*/*')).reduce((data, {name: path}) => {
 			const [dir, file, subfile = ''] = path.split('/');

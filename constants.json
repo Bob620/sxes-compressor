@@ -39,7 +39,8 @@
   },
   "metaMeta": {
     "ANALYSES": "analyses",
-    "PROJECTS": "projects"
+    "PROJECTS": "projects",
+    "VERSION": "version"
   },
   "superDataMeta": {
     "UUID": "uuid",
